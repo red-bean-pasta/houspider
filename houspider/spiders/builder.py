@@ -7,8 +7,9 @@ from houkit.noder import (
     add_reload_button,
     sopify,
 )
+from houkit.nodes.sops import add_output
 from houkit.parameterizer import add_float_parm, add_folder, promote_controls, promote_subnets
-from .. import abdomen, skeleton
+from .. import abdomen
 from ..cephalothorax import build as build_cephalothorax
 from ..leg import build as build_legs
 from ..pedicel import build as build_pedicel
@@ -36,14 +37,14 @@ def build(parent: hou.OpNode) -> hou.SopNode:
     fused = add_fuse(spider, "fuse_main_and_legs", merged_all)
 
     recalculated = add_recalculate_normal(spider, "recalculate_normals", fused)
-    _add_subdivide(spider, "subdivision", recalculated, depth=3)
-    skeleton.build(spider, recalculated)
+    _add_subdivide(spider, "debug_subdivision", recalculated, depth=3)
+    output = add_output(spider, "OUTPUT_SPIDER", recalculated)
 
     _propagate_subnets(spider)
     _propagate_controls(spider)
 
-    recalculated.setDisplayFlag(True)
-    recalculated.setRenderFlag(True)
+    output.setDisplayFlag(True)
+    output.setRenderFlag(True)
     spider.layoutChildren()
     return spider
 

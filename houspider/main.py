@@ -1,13 +1,15 @@
 import hou
 
-from . import spider
+from . import skeleton, spider
 
 
-def build() -> hou.SopNode:
+def build() -> hou.OpNode:
     root = _get_root()
     spider_node = spider.build(root)
-    spider_node.layoutChildren()
+    skeleton.build(root, spider_node)
+    root.layoutChildren()
     return spider_node
+
 
 def _get_root() -> hou.OpNode:
     obj = hou.node("/obj")

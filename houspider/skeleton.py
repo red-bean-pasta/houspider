@@ -4,7 +4,7 @@ from .skeletons.builder import build as build_skeleton
 
 
 def build(
+    parent: hou.OpNode,
     spider: hou.OpNode,
-    spider_geo: hou.SopNode,
-) -> hou.SopNode:
-    return build_skeleton(spider, spider_geo)
+) -> hou.OpNode:
+    return build_skeleton(parent, spider)
