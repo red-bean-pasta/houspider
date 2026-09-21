@@ -3,7 +3,6 @@ from houkit.topology import fill_face
 import hou
 
 from ..helper import points_by_id, points_from_geo
-from . import frames
 from .attributes import (
     Region,
     abdomenend,
@@ -14,25 +13,14 @@ from .attributes import (
     abdomenverticalrim,
 )
 
-
-def prepare_cephalothorax_info(node: hou.SopNode) -> None:
-    frames.prepare_cephalothorax_info(node)
-
-
-def add_width_frame(node: hou.SopNode) -> None:
-    frames.add_width_frame(node)
-
-
-def add_height_frame(node: hou.SopNode) -> None:
-    frames.add_height_frame(node)
-
-
-def add_upper_middle_frame(node: hou.SopNode) -> None:
-    frames.add_upper_middle_frame(node)
-
-
-def add_lower_middle_frame(node: hou.SopNode) -> None:
-    frames.add_lower_middle_frame(node)
+# noinspection PyUnusedImports
+from .frames import (
+    prepare_cephalothorax_info,
+    add_width_frame,
+    add_height_frame,
+    add_upper_middle_frame,
+    add_lower_middle_frame,
+)
 
 
 def fill_right_side_faces(node: hou.SopNode) -> None:

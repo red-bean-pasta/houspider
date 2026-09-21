@@ -6,7 +6,6 @@ from houkit.attributer import add_prim_attrib, deduplicate_point_attribs
 from houkit.noder import get_parent
 from houkit.parameterizer import get_float_parm, get_vector3_parm
 from houkit.topology import outset
-from . import coxa_flaps, membrane, hinge_retopology
 from .attributes import ID, Region, basesternum, basesternummiddle, outer_loop_ids
 from ..sternums import attributes as sternum_attributes
 from ..helper import (
@@ -18,6 +17,18 @@ from ..helper import (
     points_from_geo,
     replace_points,
     unique_points_start_with_id,
+)
+# noinspection PyUnusedImports
+from .coxa_flaps import (
+    build_coxa_flaps,
+)
+# noinspection PyUnusedImports
+from .membrane import (
+    inset_membrane,
+)
+# noinspection PyUnusedImports
+from .hinge_retopology import (
+    retopo_corners,
 )
 
 
@@ -44,10 +55,6 @@ def extract_sternum_rim(node: hou.SopNode) -> None:
         edge = geo.createPolygon(is_closed=False)
         edge.addVertex(points[start_id])
         edge.addVertex(points[end_id])
-
-
-def build_coxa_flaps(node: hou.SopNode) -> None:
-    coxa_flaps.build_coxa_flaps(node)
 
 
 def add_flap_regions(node: hou.SopNode) -> None:
@@ -238,14 +245,6 @@ def adjust_mouth(node: hou.SopNode) -> None:
     center_position = center.position()
     for point in (right, left):
         point.setPosition(point.position() * ratio + center_position * (1 - ratio))
-
-
-def inset_membrane(node: hou.SopNode) -> None:
-    membrane.inset_membrane(node)
-
-
-def retopo_corners(node: hou.SopNode) -> None:
-    hinge_retopology.retopo_corners(node)
 
 
 def extrude_base_buffer(node: hou.SopNode) -> None:
