@@ -57,17 +57,10 @@ def get_pedipalp_bone_positions(
 
 
 def get_root_position(geo: hou.Geometry) -> hou.Vector3:
-    spine_ratio = geo.attribValue(SPINE_RATIO)
     pts = points_start_with(geo, "id", basecoxamemebrane())
     assert pts, "Expected coxa socket points on geometry"
-    ys = [p.position().y() for p in pts]
-    zs = [p.position().z() for p in pts]
-    half = len(ys) // 2
-    sorted_ys = sorted(ys)
-    btm_y = sum(sorted_ys[:half]) / half
-    top_y = sum(sorted_ys[half:]) / half
-    spine_y = top_y * (1.0 - spine_ratio) + btm_y * spine_ratio
-    return hou.Vector3(0.0, spine_y, sum(zs) / len(zs))
+    avg = sum((p.position() for p in pts), hou.Vector3()) / len(pts)
+    return hou.Vector3(0.0, avg.y(), avg.z())
 
 
 def _extract_limb_bone_positions(
