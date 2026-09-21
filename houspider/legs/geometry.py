@@ -1,17 +1,27 @@
 import math
 
 import hou
-
-from houkit.attributer import add_prim_attrib
+from houkit.attributer import add_global_attrib, add_prim_attrib
 from houkit.geomath import rotation_to
 from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_float_parm, get_parms
 from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_positions
-from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
-from ..helper import points_from_geo
-from .pedipalp.attributes import tmp_front_socket_size
+
 from .attributes import LegParam
 from .cubes import build_leg
+from .pedipalp.attributes import tmp_front_socket_size
+from ..attributes import GlobalAttrib
+from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
+from ..helper import points_from_geo
+
+
+def record_global_info(
+    node: hou.SopNode,
+) -> None:
+    geo = node.geometry()
+    parent = get_parent(node)
+    control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
+    add_global_attrib(geo, GlobalAttrib.SPINE_RATIO, control_params.segment_bulge_bias_ratio)
 
 
 def extrude_legs(
@@ -131,7 +141,6 @@ def _adjust_coxa(
         support_loop_ratio,
     )
     _build_coxa_socket_faces(
-        geo,
         socket_points,
         socket_midpoints,
         coxa_start_support_pts,
@@ -197,7 +206,6 @@ def _get_coxa_buffer_ratio(
 
 
 def _build_coxa_socket_faces(
-    geo: hou.Geometry,
     socket_points: list[hou.Point],
     socket_midpoints: list[hou.Point],
     support_points: list[hou.Point],

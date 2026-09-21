@@ -8,7 +8,7 @@ from houkit.noder import (
     sopify,
 )
 from houkit.parameterizer import add_float_parm, add_folder, promote_controls, promote_subnets
-from .. import abdomen
+from .. import abdomen, skeleton
 from ..cephalothorax import build as build_cephalothorax
 from ..leg import build as build_legs
 from ..pedicel import build as build_pedicel
@@ -37,6 +37,7 @@ def build(parent: hou.OpNode) -> hou.SopNode:
 
     recalculated = add_recalculate_normal(spider, "recalculate_normals", fused)
     _add_subdivide(spider, "subdivision", recalculated, depth=3)
+    skeleton.build(spider, recalculated)
 
     _propagate_subnets(spider)
     _propagate_controls(spider)

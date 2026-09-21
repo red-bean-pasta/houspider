@@ -8,7 +8,41 @@ from .attributes import tmp_chelicerae_start_z
 from ...bases.attributes import basemaxillamembrane
 from ...helper import points_from_geo, sopify_chain
 from ...cheliceraes.attributes import cheliceraestartmembranesupport
-from .. import topology
+from . import topology
+
+
+def build(
+    parent: hou.SopNode,
+    input_node: hou.SopNode,
+) -> hou.SopNode:
+    pedipalp = add_reloadable_subnet(parent, "pedipalp")
+    pedipalp.setInput(0, input_node)
+    _add_controls(pedipalp)
+
+    cleaned_up = sopify_chain(
+        pedipalp,
+        pedipalp.indirectInputs()[0],
+        (
+            topology.remove_noise_points,
+            topology.build_basic,
+            topology.trim_bottom_side_length,
+            topology.position_basic,
+            topology.delete_start_coxa_supports,
+            topology.prepare_coxa_base_trapezoid,
+            topology.fill_bottom_right_face,
+            topology.fill_back_face,
+            topology.fill_top_face,
+            topology.add_front_upper_face,
+            topology.add_front_loop_faces,
+            topology.add_maxilla_quads,
+            topology.fill_maxilla_faces,
+            topology.cleanup,
+        ),
+    )
+    fused = add_fuse(pedipalp, "fuse_sockets", cleaned_up)
+    add_output(pedipalp, "OUT_PEDIPALP", fused)
+    pedipalp.layoutChildren()
+    return pedipalp
 
 
 def add_parameters(subnet: hou.OpNode) -> None:
@@ -67,40 +101,6 @@ def extract_required_points(
         basemaxillamembrane(4),
     )
     return set(retained)
-
-
-def build(
-    parent: hou.SopNode,
-    input_node: hou.SopNode,
-) -> hou.SopNode:
-    pedipalp = add_reloadable_subnet(parent, "pedipalp")
-    pedipalp.setInput(0, input_node)
-    _add_controls(pedipalp)
-
-    cleaned_up = sopify_chain(
-        pedipalp,
-        pedipalp.indirectInputs()[0],
-        (
-            topology.remove_noise_points,
-            topology.build_basic,
-            topology.trim_bottom_side_length,
-            topology.position_basic,
-            topology.delete_start_coxa_supports,
-            topology.prepare_coxa_base_trapezoid,
-            topology.fill_pedipalp_bottom_right_face,
-            topology.fill_pedipalp_back_face,
-            topology.fill_pedipalp_top_face,
-            topology.add_pedipalp_front_upper_face,
-            topology.add_pedipalp_front_loop_faces,
-            topology.add_pedipalp_maxilla_quads,
-            topology.fill_pedipalp_maxilla_faces,
-            topology.cleanup_pedipalp,
-        ),
-    )
-    fused = add_fuse(pedipalp, "fuse_sockets", cleaned_up)
-    add_output(pedipalp, "OUT_PEDIPALP", fused)
-    pedipalp.layoutChildren()
-    return pedipalp
 
 
 def _add_controls(parent: hou.SopNode) -> hou.SopNode:

@@ -1,19 +1,19 @@
 import hou
-
-from houkit.topologies.basic import remove_unused_points
-from ...bases.attributes import basemaxillamembrane
-from ...helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
-from houkit.attributer import points_by_attrib, points_start_with, remove_attribs
+from houkit.attributer import points_start_with, remove_attribs
 from houkit.geomath import rotation_to
 from houkit.models import Moject
 from houkit.noder import get_control
 from houkit.parameterizer import get_float_parm, get_parms
+from houkit.topologies.basic import remove_unused_points
 from houkit.topology import fill_face
-from ..attributes import LegParam, Region
-from ..cubes import build_leg
+
 from .attributes import tmp_coxa_corner, tmp_coxa_end, tmp_coxa_start, tmp_coxa_support, tmp_front_socket_size, \
     tmp_chelicerae_start_z
 from .helper import get_leg
+from ..attributes import LegParam, Region
+from ..cubes import build_leg
+from ...bases.attributes import basemaxillamembrane
+from ...helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
 
 
 def remove_noise_points(
@@ -128,6 +128,10 @@ def cleanup(node: hou.SopNode) -> None:
         set_point_id(p, "")
     remove_attribs(geo, global_attributes=(tmp_chelicerae_start_z(),))
 
+    for prim in geo.prims():
+        if not prim.stringAttribValue("region"):
+            prim.setAttribValue("region", Region.LEGSEGMENT)
+
     remove_unused_points(geo)
 
 
@@ -240,7 +244,7 @@ def _add_base_trapezoid(
     p3 = add_id_point(geo, pos_p3, tmp_coxa_corner("base", 1))
     p4 = add_id_point(geo, pos_p4, tmp_coxa_corner("base", 2))
 
-    fill_face([m1, m2, p3, p4], reverse=True)
+    fill_face([m1, m2, p3, p4], reverse_order=True)
 
     return height
 

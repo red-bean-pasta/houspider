@@ -4,6 +4,7 @@ from houkit.attributer import add_global_attrib, remove_attribs
 from .pedipalp.attributes import tmp_front_socket_size
 from ..bases import attributes as base_attributes
 from ..helper import positions_from_geo, prims_by_attr
+from .attributes import Region
 
 
 def prepare_attributed_data(node: hou.SopNode) -> None:
@@ -37,8 +38,14 @@ def extract_right_coxa(node: hou.SopNode) -> None:
     geo.deletePrims(geo.prims(), keep_points=True)
 
 
-def remove_tmp_attributes(node: hou.SopNode) -> None:
+def cleanup(node: hou.SopNode) -> None:
+    geo = node.geometry()
+
     remove_attribs(node.geometry(), global_attributes=(tmp_front_socket_size(),))
+
+    for prim in geo.prims():
+        if not prim.stringAttribValue("region"):
+            prim.setAttribValue("region", Region.LEGSEGMENT)
 
 
 def _get_front_coxa_socket_size(geo: hou.Geometry) -> tuple[float, float]:

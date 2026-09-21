@@ -24,7 +24,6 @@ class ID(StrEnum):
     PEDICELMIDDLEUPPER = auto()
     PEDICELMIDDLELOWER = auto()
 
-
 class Region(StrEnum):
     PEDICEL = auto()
 

@@ -222,8 +222,8 @@ def _reconnect_lower_sternum_pedicel_loop(
     fill_pentagon([cp_outer_right, bs5_1, right_inner, s5, cp_outer_lower], (cp_outer_lower, s5), reverse_order=True)
     fill_pentagon([cp_outer_left, bs5_2, left_inner, s5, cp_outer_lower], (cp_outer_lower, s5), reverse_order=False)
 
-    fill_face([cp_lower, cp_right, cp_outer_right, cp_outer_lower], reverse=False)
-    fill_face([cp_lower, cp_left, cp_outer_left, cp_outer_lower], reverse=True)
+    fill_face([cp_lower, cp_right, cp_outer_right, cp_outer_lower], reverse_order=False)
+    fill_face([cp_lower, cp_left, cp_outer_left, cp_outer_lower], reverse_order=True)
 
 
 def _reconnect_upper_sternum_pedicel_loop(
@@ -391,4 +391,3 @@ def _adjust_opening_points_depth(
     offset = hou.Vector3(0.0, 0.0, -offset_z)
     for pt in (cp_right, cp_left, cp_upper):
         offset_point(pt, offset)
-
