@@ -1,7 +1,7 @@
 import hou
 from houkit.skeleton import get_named_point_alignment_rotation
 
-from .attributes import LegJoint, leg_joint_name, body_joint_name, BodyJoint
+from .attributes import LegJoint, leg_joint_name, body_joint_name, BodyJoint, pedipalp_joint_name, PedipalpJoint
 
 
 def add_rig_pose(
@@ -14,7 +14,8 @@ def add_rig_pose(
     geo = input_node.geometry()
     rotations = (
         [_get_pedicel_rotations(geo)]
-        + _get_trochanter_rotations(geo)
+        + _get_leg_rotations(geo)
+        # + _get_pedipalp_rotations(geo) # Not straightened by design
     )
     pose.parm("transformations").set(len(rotations))
     for index, (name, rotation) in enumerate(rotations):
@@ -37,8 +38,22 @@ def _get_pedicel_rotations(
     )
     return pedicel_name, rotation
 
+def _get_pedipalp_rotations(
+    geo: hou.Geometry,
+) -> list[tuple[str, hou.Vector3]]:
+    rotations: list[tuple[str, hou.Vector3]] = []
+    for is_right in (True, False):
+        trochanter_name = pedipalp_joint_name(is_right, PedipalpJoint.TROCHANTER)
+        rotation = get_named_point_alignment_rotation(
+            geo,
+            pedipalp_joint_name(is_right, PedipalpJoint.COXA),
+            trochanter_name,
+            pedipalp_joint_name(is_right, PedipalpJoint.FEMUR),
+        )
+        rotations.append((trochanter_name, rotation))
+    return rotations
 
-def _get_trochanter_rotations(
+def _get_leg_rotations(
     geo: hou.Geometry,
 ) -> list[tuple[str, hou.Vector3]]:
     rotations: list[tuple[str, hou.Vector3]] = []
