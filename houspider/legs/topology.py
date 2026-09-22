@@ -5,5 +5,6 @@ from .coxa import (
 )
 # noinspection PyUnusedImports
 from .geometry import (
+    record_global_info,
     extrude_legs,
 )

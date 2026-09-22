@@ -5,11 +5,16 @@ from houkit.attributer import points_start_with
 
 from .selector import get_pedipalp_socket_points, get_coxa_socket_points, get_local_z_value, get_local_z_direction, \
     traverse_limb_prims, group_membrane_rings
+from ..attributes import GlobalAttrib
 from ..abdomens.attributes import abdomenend
 from ..bases.attributes import basecoxamemebrane
 from ..helper import positions_from_geo
 from ..segments.attributes import Region
 from ..spiders.attributes import ID as PEDICEL_IDS
+
+
+SPINE_RATIO = GlobalAttrib.SPINE_RATIO
+
 
 def get_body_bone_positions(geo: hou.Geometry) -> list[hou.Vector3]:
     root_pos = get_root_position(geo)
@@ -22,8 +27,8 @@ def get_leg_bone_positions(
     geo: hou.Geometry,
     is_right: bool,
     leg_index: int,
-    spine_ratio: float,
 ) -> list[hou.Vector3]:
+    spine_ratio = geo.attribValue(SPINE_RATIO)
     socket_pts = get_coxa_socket_points(geo, is_right, leg_index)
     assert len(socket_pts) == 4, f"Expected 4 socket points for leg {'R' if is_right else 'L'}{leg_index}, got {len(socket_pts)}"
     return _extract_limb_bone_positions(socket_pts, spine_ratio)
@@ -32,8 +37,8 @@ def get_leg_bone_positions(
 def get_pedipalp_bone_positions(
     geo: hou.Geometry,
     is_right: bool,
-    spine_ratio: float,
 ) -> list[hou.Vector3]:
+    spine_ratio = geo.attribValue(SPINE_RATIO)
     socket_pts = get_pedipalp_socket_points(geo, is_right)
     assert len(socket_pts) == 4, f"Expected 4 socket points for pedipalp {'R' if is_right else 'L'}, got {len(socket_pts)}"
     return _extract_limb_bone_positions(socket_pts, spine_ratio)

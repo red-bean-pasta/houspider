@@ -1,16 +1,26 @@
 import math
 
 import hou
-from houkit.attributer import add_prim_attrib
+from houkit.attributer import add_global_attrib, add_prim_attrib
 from houkit.geomath import rotation_to
 from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_parms
 from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_positions
 
+from ..attributes import GlobalAttrib
 from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
 from ..helper import points_from_geo
 from ..segments.attributes import LegParam
 from ..segments.build import build_leg
+
+
+def record_global_info(
+    node: hou.SopNode,
+) -> None:
+    geo = node.geometry()
+    parent = get_parent(node)
+    control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
+    add_global_attrib(geo, GlobalAttrib.SPINE_RATIO, control_params.segment_bulge_bias_ratio)
 
 
 def extrude_legs(

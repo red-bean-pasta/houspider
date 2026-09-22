@@ -22,7 +22,8 @@ def build(
     _add_parameters(legs)
     _add_controls(legs)
 
-    extracted = sopify(legs, legs.indirectInputs()[0], topology.extract_right_leg_points)
+    recorded = sopify(legs, legs.indirectInputs()[0], topology.record_global_info)
+    extracted = sopify(legs, recorded, topology.extract_right_leg_points)
     extruded = sopify(legs, extracted, topology.extrude_legs)
 
     cleaned = sopify(legs, extruded, topology.cleanup)

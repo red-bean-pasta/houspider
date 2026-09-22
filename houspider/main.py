@@ -17,7 +17,6 @@ def build() -> hou.OpNode:
         spider_node,
         name="skeleton",
         input_node=geometry,
-        parameter_node=geometry,
     )
 
     _propagate_parameters(spider_node)
