@@ -1,7 +1,7 @@
 """Legacy"""
 from hou import Point, Geometry, SopNode
 
-from houkit.topology import split_point, get_line_intersection, is_neighbor, find_prim, fill_face
+from houkit.topology import split_point, line_intersect_line, is_neighbor, find_prim, fill_face
 
 from ..helper import points_from_geo, set_point_id
 from .attributes import basecoxamemebrane, basesternum, basemouthmembrane, basemaxillamembrane
@@ -103,7 +103,7 @@ def _split_and_fill_corner(
     p1, p2, p_end = connected
     assert all(is_neighbor(center, p) for p in connected), f'{center.stringAttribValue("id")} is not neighbors with {tuple(p.stringAttribValue("id") for p in connected)}'
 
-    pos = get_line_intersection(
+    pos = line_intersect_line(
         (center, p_end),
         (p1, p2),
     )

@@ -11,12 +11,16 @@ from houkit.noder import (
     add_output,
     add_recalculate_normal,
     add_reloadable_subnet,
+    sopify,
 )
-from houkit.parameterizer import promote_subnets
+from houkit.parameterizer import add_float_parm
+
+from .spiders import topology
 
 
 def build(spider: hou.OpNode) -> hou.SopNode:
     cephalothorax = add_reloadable_subnet(spider, "cephalothorax")
+    _add_parameters(cephalothorax)
 
     base = build_base(cephalothorax)
 
@@ -30,16 +34,24 @@ def build(spider: hou.OpNode) -> hou.SopNode:
 
     recalculate = add_recalculate_normal(cephalothorax, "recalculate_normals", chelicerae)
     positioned = _position_cephalothorax(cephalothorax, recalculate)
+    opened = sopify(cephalothorax, positioned, topology.open_cepha_pedicel)
 
-    _ = add_output(cephalothorax, "OUT_CEPHALOTHORAX", positioned)
+    _ = add_output(cephalothorax, "OUT_CEPHALOTHORAX", opened)
 
-    _propagate_subnets(cephalothorax)
     cephalothorax.layoutChildren()
     return cephalothorax
 
 
-def _propagate_subnets(cephalothorax: hou.SopNode) -> None:
-    promote_subnets(cephalothorax)
+def _add_parameters(cephalothorax: hou.SopNode) -> None:
+    add_float_parm(
+        cephalothorax,
+        "pedicel_opening_ratios",
+        2,
+        (0.5, 0.5),
+        (0.0, 1.0),
+        label="Pedicel Opening",
+        help="X sets the side and upper opening proportion. Y places the lower opening between the base end and sternum rim.",
+    )
 
 
 def _position_cephalothorax(parent: hou.SopNode, source: hou.SopNode) -> hou.SopNode:

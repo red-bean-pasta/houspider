@@ -1,15 +1,22 @@
 import hou
 
 from houkit.noder import add_reload_button
+from houkit.parameterizer import promote_subnets, promote_controls
+from houkit.parameterizings.operator import add_folder
+
 from . import skeleton, spider
 
 
 def build() -> hou.OpNode:
     root = _get_root()
     spider_node = _add_geo(root, "spider")
+
     geometry = spider.build(spider_node, name="geometry")
+
     skel = skeleton.build(spider_node, name="skeleton")
     skel.setInput(0, geometry)
+
+    _propagate_parameters(spider_node)
 
     spider_node.layoutChildren()
     root.layoutChildren()
@@ -30,3 +37,11 @@ def _add_geo(parent: hou.OpNode, name: str) -> hou.OpNode:
             child.destroy()
         add_reload_button(node)
     return node
+
+
+def _propagate_parameters(parent: hou.OpNode) -> None:
+    add_folder(parent, "build")
+    promote_subnets(parent, depth=None, dest_group="Build")
+
+    add_folder(parent, "advanced")
+    promote_controls(parent, depth=None, dest_group="Advanced",)

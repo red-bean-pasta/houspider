@@ -141,7 +141,7 @@ def _add_controls(parent: hou.SopNode) -> hou.SopNode:
         control,
         "segment_bulge_bias_ratio",
         1,
-        0.5,
+        0.4,
         (0.0, None),
         label="Segment Bulge Bias",
         help="Moves the segment’s fullest area between its upper and lower sides.",

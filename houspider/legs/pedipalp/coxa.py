@@ -1,6 +1,6 @@
 import hou
 
-from houkit.geomath import get_line_face_intersection, is_zero_approx
+from houkit.geomath import is_zero_approx, line_intersect_face, line_intersect_line
 from houkit.noder import get_control
 from houkit.parameterizer import get_float_parm, get_parms
 from houkit.topology import fill_face
@@ -89,7 +89,7 @@ def _get_maxilla_pole(node: hou.SopNode) -> hou.Vector3:
     direction = hou.Vector3(direction.x(), 0, direction.z())
 
     m2_pos = m2.position()
-    hit = get_line_face_intersection(
+    hit = line_intersect_face(
         (m2_pos, m2_pos + direction * 100),
         (e1.position(), e2.position(), e3.position()),
     )

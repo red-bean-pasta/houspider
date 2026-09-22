@@ -6,7 +6,7 @@ from houkit.noder import (
     add_output,
     add_reloadable_subnet,
 )
-from houkit.parameterizer import add_float_parm, promote_subnets
+from houkit.parameterizer import add_float_parm
 from . import topology
 from .. import sternum
 from ..helper import sopify_chain
@@ -58,7 +58,6 @@ def build(cephalothorax: hou.SopNode) -> hou.SopNode:
     )
     add_output(base, "OUT_BASE", buffered)
 
-    promote_subnets(base)
     base.layoutChildren()
     return base
 

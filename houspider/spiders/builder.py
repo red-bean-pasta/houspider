@@ -8,7 +8,6 @@ from houkit.noder import (
     sopify,
 )
 from houkit.nodes.sops import add_output
-from houkit.parameterizer import add_float_parm, add_folder, promote_controls, promote_subnets
 from .. import abdomen
 from ..cephalothorax import build as build_cephalothorax
 from ..leg import build as build_legs
@@ -20,12 +19,11 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
     spider = _add_spider(parent, name)
 
     cephalothorax = build_cephalothorax(spider)
-    opened_cepha = sopify(spider, cephalothorax, topology.open_cepha_pedicel)
 
-    abdomen_node = abdomen.build(spider, opened_cepha)
+    abdomen_node = abdomen.build(spider, cephalothorax)
 
     opened_abdomen = sopify(spider, abdomen_node, topology.open_abdomen_pedicel)
-    merged_c_a = add_merge(spider, "merge_cephalothorax_and_abdomen", opened_cepha, opened_abdomen)
+    merged_c_a = add_merge(spider, "merge_cephalothorax_and_abdomen", cephalothorax, opened_abdomen)
 
     pedicel = build_pedicel(spider, merged_c_a)
     merged_ca_p = add_merge(spider, "merge_main_and_pedicel", merged_c_a, pedicel)
@@ -40,9 +38,6 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
     _add_subdivide(spider, "debug_subdivision", recalculated, depth=3)
     output = add_output(spider, "OUTPUT_SPIDER", recalculated)
 
-    _propagate_subnets(spider)
-    _propagate_controls(spider)
-
     output.setDisplayFlag(True)
     output.setRenderFlag(True)
     spider.layoutChildren()
@@ -50,35 +45,7 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
 
 
 def _add_spider(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
-    spider = add_reloadable_subnet(parent, name)
-    _add_parameters(spider)
-    return spider
-
-
-def _add_parameters(spider: hou.OpNode) -> None:
-    add_folder(
-        spider,
-        "build",
-    )
-    add_float_parm(
-        spider,
-        "pedicel_opening_ratios",
-        2,
-        (0.5, 0.5),
-        (0.0, 1.0),
-        folder_label="Build",
-        label="Pedicel Opening",
-        help="X sets the side and upper opening proportion. Y places the lower opening between the base end and sternum rim.",
-    )
-
-
-def _propagate_subnets(spider: hou.OpNode) -> None:
-    promote_subnets(spider, dest_group="Build")
-
-
-def _propagate_controls(spider: hou.OpNode) -> None:
-    add_folder(spider, "advanced")
-    promote_controls(spider, depth=None, dest_group="Advanced",)
+    return add_reloadable_subnet(parent, name)
 
 
 def _add_subdivide(
