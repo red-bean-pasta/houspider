@@ -28,6 +28,7 @@ No Latex Output. Use only MarkDown. LaTex have problem rendering in PyCharm.
 You can use git stash, commit and branch. But those are quite powerful moves so always clarify your intent then ask for permit. 
 Response when you are confident enough. Don't be paranoid and spend forever verifying or inspecting. Those efforts are not appreciated.
 You can always record your thoughts, findings, summaries or any other necessary stuff to `.aiassistant/tmp/`, if it helps your work.
+You can use `hhelp` to query Houdini documents instead of manually inspecting source python files, e.g., `hhelp html /nodes/sop/kinefx--capturepackedgeo.html`.
 
 # Examples
 ## Example for inspecting output HIP file
@@ -80,6 +81,7 @@ Output the mode at the beginning of every of your response, whether already spec
 
 
 # To iterate
+- no overengineering
 - break down methods
 - raise on questions
 - prefer ACP tools
