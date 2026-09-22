@@ -4,7 +4,7 @@ from houkit.noder import (
     add_fuse,
     add_merge,
     add_recalculate_normal,
-    add_reload_button,
+    add_reloadable_subnet,
     sopify,
 )
 from houkit.nodes.sops import add_output
@@ -16,8 +16,8 @@ from ..pedicel import build as build_pedicel
 from . import topology
 
 
-def build(parent: hou.OpNode) -> hou.SopNode:
-    spider = _add_spider(parent)
+def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
+    spider = _add_spider(parent, name)
 
     cephalothorax = build_cephalothorax(spider)
     opened_cepha = sopify(spider, cephalothorax, topology.open_cepha_pedicel)
@@ -49,14 +49,8 @@ def build(parent: hou.OpNode) -> hou.SopNode:
     return spider
 
 
-def _add_spider(parent: hou.OpNode) -> hou.SopNode:
-    spider = parent.node("spider")
-    if not spider:
-        spider = parent.createNode("geo", "spider")
-        for child in spider.children():
-            child.destroy()
-        add_reload_button(spider)
-
+def _add_spider(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
+    spider = add_reloadable_subnet(parent, name)
     _add_parameters(spider)
     return spider
 

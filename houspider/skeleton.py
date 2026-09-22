@@ -5,6 +5,6 @@ from .skeletons.builder import build as build_skeleton
 
 def build(
     parent: hou.OpNode,
-    spider: hou.OpNode,
+    name: str = "skeleton",
 ) -> hou.OpNode:
-    return build_skeleton(parent, spider)
+    return build_skeleton(parent, name=name)

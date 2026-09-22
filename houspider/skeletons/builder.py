@@ -1,17 +1,16 @@
 import hou
 
-from houkit.noder import add_fuse, add_merge, add_output, add_reload_button, sopify
+from houkit.noder import add_fuse, add_merge, add_output, add_reloadable_subnet, sopify
 from . import skinning, topology
 
 
 def build(
     parent: hou.OpNode,
-    spider: hou.OpNode,
+    name: str = "skeleton",
 ) -> hou.OpNode:
-    skeleton = _add_skeleton(parent)
-    skeleton.setInput(0, spider)
+    skeleton = _add_skeleton(parent, name)
 
-    source = _add_import(skeleton, "in_spider")
+    source = skeleton.indirectInputs()[0]
     body_skel = sopify(skeleton, source, topology.build_body_skeleton)
     legs_skel = sopify(skeleton, source, topology.build_leg_skeletons)
     pedipalps_skel = sopify(skeleton, source, topology.build_pedipalps_skeleton)
@@ -29,24 +28,8 @@ def build(
     return skeleton
 
 
-def _add_skeleton(parent: hou.OpNode) -> hou.ObjNode:
-    skeleton = parent.node("skeleton")
-    if not skeleton:
-        skeleton = parent.createNode("geo", "skeleton")
-        for child in skeleton.children():
-            child.destroy()
-        add_reload_button(skeleton)
-    return skeleton
-
-
-def _add_import(
-    parent: hou.OpNode,
-    name: str,
-    target_path: str = '`opinputpath("..", 0)`',
-) -> hou.SopNode:
-    om = parent.createNode("object_merge", name)
-    om.parm("objpath1").set(target_path)
-    return om
+def _add_skeleton(parent: hou.OpNode, name: str = "skeleton") -> hou.OpNode:
+    return add_reloadable_subnet(parent, name)
 
 
 def _add_rig_doctor(
