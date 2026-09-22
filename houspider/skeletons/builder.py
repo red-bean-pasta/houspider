@@ -1,7 +1,7 @@
 import hou
 
 from houkit.noder import add_fuse, add_merge, add_output, add_reload_button, sopify
-from . import topology
+from . import skinning, topology
 
 
 def build(
@@ -22,11 +22,14 @@ def build(
     rig_doctor = _add_rig_doctor(skeleton, "rig_doctor", fused)
     add_output(skeleton, "OUT_SKELETON", rig_doctor)
 
+    captured_skin = skinning.capture_skin(skeleton, source)
+    add_output(skeleton, "OUT_SKIN", captured_skin)
+
     skeleton.layoutChildren()
     return skeleton
 
 
-def _add_skeleton(parent: hou.OpNode) -> hou.OpNode:
+def _add_skeleton(parent: hou.OpNode) -> hou.ObjNode:
     skeleton = parent.node("skeleton")
     if not skeleton:
         skeleton = parent.createNode("geo", "skeleton")

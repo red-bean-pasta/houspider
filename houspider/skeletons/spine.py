@@ -2,15 +2,15 @@ from collections.abc import Collection
 
 import hou
 from houkit.attributer import points_start_with
-from houkit.topology import is_neighbor
 
+from .selector import get_pedipalp_socket_points, get_coxa_socket_points, get_local_z_value, get_local_z_direction, \
+    traverse_limb_prims, group_membrane_rings
 from ..abdomens.attributes import abdomenend
 from ..attributes import GlobalAttrib
-from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
+from ..bases.attributes import basecoxamemebrane
 from ..helper import positions_from_geo
 from ..legs.attributes import Region
 from ..spiders.attributes import ID as PEDICEL_IDS
-
 
 SPINE_RATIO = GlobalAttrib.SPINE_RATIO
 
@@ -28,11 +28,8 @@ def get_leg_bone_positions(
     leg_index: int,
 ) -> list[hou.Vector3]:
     spine_ratio = geo.attribValue(SPINE_RATIO)
-
-    leg_affix = leg_index if is_right else -leg_index
-    prefix = f"{basecoxamemebrane(leg_affix)}_"
-    socket_pts = points_start_with(geo, "id", prefix)
-    assert len(socket_pts) == 4, f"Expected 4 socket points for {prefix}, got {len(socket_pts)}"
+    socket_pts = get_coxa_socket_points(geo, is_right, leg_index)
+    assert len(socket_pts) == 4, f"Expected 4 socket points for leg {'R' if is_right else 'L'}{leg_index}, got {len(socket_pts)}"
     return _extract_limb_bone_positions(socket_pts, spine_ratio)
 
 
@@ -41,17 +38,7 @@ def get_pedipalp_bone_positions(
     is_right: bool,
 ) -> list[hou.Vector3]:
     spine_ratio = geo.attribValue(SPINE_RATIO)
-
-    left_socket_pts = points_start_with(geo, "id", basemaxillamembrane("-"))
-    if is_right:
-        socket_pts = [
-            p
-            for p in points_start_with(geo, "id", basemaxillamembrane())
-            if p not in left_socket_pts
-        ]
-    else:
-        socket_pts = left_socket_pts
-
+    socket_pts = get_pedipalp_socket_points(geo, is_right)
     assert len(socket_pts) == 4, f"Expected 4 socket points for pedipalp {'R' if is_right else 'L'}, got {len(socket_pts)}"
     return _extract_limb_bone_positions(socket_pts, spine_ratio)
 
@@ -69,64 +56,19 @@ def _extract_limb_bone_positions(
 ) -> list[hou.Vector3]:
     socket_spine = _calculate_spine_position(socket_pts, spine_ratio)
 
-    prims, pts = _traverse_limb_prims(socket_pts)
-    membranes = _group_membrane_rings(prims)
+    prims, pts = traverse_limb_prims(socket_pts)
+    membranes = group_membrane_rings(prims)
 
-    first_membrane = min(membranes, key=lambda m: sum(p.position().length() for p in m[1]) / len(m[1]))
-    direction = _get_local_z_direction(first_membrane[1])
-
-    sorted_rings = sorted(
-        [r[1] for r in membranes],
-        key=lambda ring: sum(_get_local_z_value(p, direction) for p in ring) / len(ring),
-    )
+    first_membrane = membranes[0]
+    direction = get_local_z_direction(first_membrane[1])
 
     membrane_spines = [
-        _calculate_spine_position(_get_former_segment_end_points(group, direction), spine_ratio)
-        for group in sorted_rings
+        _calculate_spine_position(_get_former_segment_end_points(group[1], direction), spine_ratio)
+        for group in membranes
     ]
     tip_pos = _find_tip_position(pts, direction, spine_ratio)
 
     return [socket_spine, *membrane_spines, tip_pos]
-
-
-def _get_local_z_direction(
-    membrane_points: Collection[hou.Point],
-) -> hou.Vector3:
-    assert len(membrane_points) > 12
-    boundaries = [
-        p
-        for p in membrane_points
-        if any(pr.stringAttribValue("region") == Region.LEGSEGMENT for pr in p.prims())
-    ]
-    assert len(boundaries) == 8, f"Expected 8 boundary points on membrane ring, got {len(boundaries)}"
-
-    p0 = boundaries[0]
-    direct_neighbors = [p for p in boundaries if is_neighbor(p, p0)]
-    loop1 = [
-        p
-        for p in boundaries
-        if p == p0 or p in direct_neighbors or any(is_neighbor(p, n) for n in direct_neighbors)
-    ]
-    loop2 = [
-        p
-        for p in boundaries
-        if p not in loop1
-    ]
-    assert len(loop1) == 4 and len(loop2) == 4, f"Expected 4 points per loop, got {len(loop1)} and {len(loop2)}"
-
-    m1 = sum((p.position() for p in loop1), hou.Vector3()) / 4.0
-    m2 = sum((p.position() for p in loop2), hou.Vector3()) / 4.0
-    former, latter = (m1, m2) if m1.length() < m2.length() else (m2, m1)
-    direction = (latter - former).normalized()
-    return hou.Vector3(direction.x(), 0.0, direction.z()).normalized()
-
-
-def _get_local_z_value(
-    target: hou.Point | hou.Vector3,
-    direction: hou.Vector3,
-) -> float:
-    pos = target.position() if isinstance(target, hou.Point) else target
-    return pos.dot(direction)
 
 
 def _get_former_segment_end_points(
@@ -139,7 +81,7 @@ def _get_former_segment_end_points(
         if any(pr.stringAttribValue("region") == Region.LEGSEGMENT for pr in p.prims())
     ]
     assert len(boundaries) == 8, f"Expected 8 boundary points on membrane ring, got {len(boundaries)}"
-    return sorted(boundaries, key=lambda p: _get_local_z_value(p, direction))[:4]
+    return sorted(boundaries, key=lambda p: get_local_z_value(p, direction))[:4]
 
 
 def _find_tip_position(
@@ -147,7 +89,7 @@ def _find_tip_position(
     direction: hou.Vector3,
     spine_ratio: float,
 ) -> hou.Vector3:
-    furthest_points = sorted(limb_points, key=lambda p: _get_local_z_value(p, direction))[-4:]
+    furthest_points = sorted(limb_points, key=lambda p: get_local_z_value(p, direction))[-4:]
     return _calculate_spine_position(furthest_points, spine_ratio)
 
 
@@ -162,56 +104,6 @@ def _calculate_spine_position(
     mid_top = (top1.position() + top2.position()) * 0.5
     mid_btm = (btm1.position() + btm2.position()) * 0.5
     return mid_top * (1.0 - spine_ratio) + mid_btm * spine_ratio
-
-
-def _traverse_limb_prims(
-    socket_pts: list[hou.Point],
-) -> tuple[set[hou.Prim], set[hou.Point]]:
-    visited_prims: set[hou.Prim] = set()
-    visited_pts: set[hou.Point] = set(socket_pts)
-
-    queue: list[hou.Point] = list(socket_pts)
-    while queue:
-        pt = queue.pop(0)
-        for prim in pt.prims():
-            if prim in visited_prims:
-                continue
-            region = prim.stringAttribValue("region")
-            if region in (Region.LEGSEGMENT, Region.LEGMEMBRANE):
-                visited_prims.add(prim)
-                for p in prim.points():
-                    if p not in visited_pts:
-                        visited_pts.add(p)
-                        queue.append(p)
-
-    return visited_prims, visited_pts
-
-
-def _group_membrane_rings(
-    prims: set[hou.Prim],
-) -> list[tuple[set[hou.Prim], set[hou.Point]]]:
-    mem_prims = [p for p in prims if p.stringAttribValue("region") == Region.LEGMEMBRANE]
-
-    rings: list[tuple[set[hou.Prim], set[hou.Point]]] = []
-    visited_mems: set[hou.Prim] = set()
-    for prim in mem_prims:
-        if prim in visited_mems:
-            continue
-        queue = [prim]
-        comp_prims: set[hou.Prim] = set()
-        visited_mems.add(prim)
-        while queue:
-            cur = queue.pop()
-            comp_prims.add(cur)
-            for pt in cur.points():
-                for nbr in pt.prims():
-                    if nbr in mem_prims and nbr not in visited_mems:
-                        visited_mems.add(nbr)
-                        queue.append(nbr)
-        ring_pts = set({pt for p in comp_prims for pt in p.points()})
-        rings.append((comp_prims, ring_pts))
-
-    return rings
 
 
 def _get_averaged_position(
