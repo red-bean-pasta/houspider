@@ -8,10 +8,10 @@ from houkit.noder import (
     sopify,
 )
 from houkit.nodes.sops import add_output
-from .. import abdomen
-from ..cephalothorax import build as build_cephalothorax
-from ..leg import build as build_legs
-from ..pedicel import build as build_pedicel
+from ..abdomens.build import build as build_abdomen
+from ..cephalothoraxes.build import build as build_cephalothorax
+from ..legs.build import build as build_legs
+from ..pedicels.build import build as build_pedicel
 from . import topology
 
 
@@ -20,7 +20,7 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
 
     cephalothorax = build_cephalothorax(spider)
 
-    abdomen_node = abdomen.build(spider, cephalothorax)
+    abdomen_node = build_abdomen(spider, cephalothorax)
 
     opened_abdomen = sopify(spider, abdomen_node, topology.open_abdomen_pedicel)
     merged_c_a = add_merge(spider, "merge_cephalothorax_and_abdomen", cephalothorax, opened_abdomen)

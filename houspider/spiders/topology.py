@@ -7,6 +7,6 @@ from .abdomen_pedicel import (
     open_abdomen_pedicel,
 )
 # noinspection PyUnusedImports
-from .sockets import (
+from .socket import (
     remove_coxa_sockets,
 )

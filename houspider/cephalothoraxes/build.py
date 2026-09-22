@@ -1,10 +1,6 @@
 import hou
 
-from .bases import attributes as base_attributes
-from .base import build as build_base
-from .chelicerae import build as build_chelicerae
-from .head import build as build_head
-from .mouth import build as build_mouth
+from ..bases import attributes as base_attributes
 from houkit.noder import (
     add_fuse,
     add_merge,
@@ -15,7 +11,11 @@ from houkit.noder import (
 )
 from houkit.parameterizer import add_float_parm
 
-from .spiders import topology
+from ..bases.build import build as build_base
+from ..cheliceraes.build import build as build_chelicerae
+from ..heads.build import build as build_head
+from ..mouths.build import build as build_mouth
+from ..spiders import topology
 
 
 def build(spider: hou.OpNode) -> hou.SopNode:

@@ -8,7 +8,7 @@ from houkit.noder import (
 )
 from houkit.parameterizer import add_float_parm
 from . import topology
-from .. import sternum
+from ..sternums.build import build as build_sternum
 from ..helper import sopify_chain
 
 
@@ -16,7 +16,7 @@ def build(cephalothorax: hou.SopNode) -> hou.SopNode:
     base = add_reloadable_subnet(cephalothorax, "base")
     _add_parameters(base)
 
-    sternum_node = sternum.build(base)
+    sternum_node = build_sternum(base)
 
     flap_regions = sopify_chain(
         base,

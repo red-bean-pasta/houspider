@@ -12,7 +12,7 @@ from houkit.parameterizer import add_float_parm, add_heading
 
 from houspider.helper import sopify_chain
 from . import topology
-from .pedipalp import builder as pedipalp_builder
+from .pedipalp import build as pedipalp_build
 
 
 def build(
@@ -32,7 +32,7 @@ def build(
     extracted = sopify(legs, prepared, topology.extract_right_coxa)
     extruded = sopify(legs, extracted, topology.extrude_legs)
 
-    pedipalp_built = pedipalp_builder.build(legs, extracted)
+    pedipalp_built = pedipalp_build.build(legs, extracted)
     merged_legs = add_merge(legs, "merge_legs_and_pedipalp", extruded, pedipalp_built)
 
     cleaned = sopify(legs, merged_legs, topology.cleanup)
@@ -105,7 +105,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
         label="Other Leg Lengths",
         help="Coxa-length scale for legs 2–4 relative to the front coxa.",
     )
-    pedipalp_builder.add_parameters(legs)
+    pedipalp_build.add_parameters(legs)
 
 
 def _add_controls(parent: hou.SopNode) -> hou.SopNode:

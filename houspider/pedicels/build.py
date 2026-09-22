@@ -2,9 +2,9 @@ from enum import StrEnum, auto
 
 import hou
 
-from .spiders import attributes as spider_attributes
-from .abdomens import attributes as abdomen_attributes
-from .helper import (
+from ..spiders import attributes as spider_attributes
+from ..abdomens import attributes as abdomen_attributes
+from ..helper import (
     affix_id,
     points_from_geo,
     points_by_id,

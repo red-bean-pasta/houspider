@@ -4,16 +4,16 @@ from houkit.noder import add_reload_button
 from houkit.parameterizer import promote_subnets, promote_controls
 from houkit.parameterizings.operator import add_folder
 
-from . import skeleton, spider
+from . import builds
 
 
 def build() -> hou.OpNode:
     root = _get_root()
     spider_node = _add_geo(root, "spider")
 
-    geometry = spider.build(spider_node, name="geometry")
+    geometry = builds.build_spider(spider_node, name="geometry")
 
-    skel = skeleton.build(spider_node, name="skeleton")
+    skel = builds.build_skeleton(spider_node, name="skeleton")
     skel.setInput(0, geometry)
 
     _propagate_parameters(spider_node)

@@ -8,7 +8,7 @@ from .attributes import Region
 
 
 def prepare_attributed_data(node: hou.SopNode) -> None:
-    from .pedipalp.builder import prepare_attributed_data as pedipalp_prepare
+    from .pedipalp.build import prepare_attributed_data as pedipalp_prepare
 
     geo = node.geometry()
     add_global_attrib(
@@ -21,7 +21,7 @@ def prepare_attributed_data(node: hou.SopNode) -> None:
 
 
 def extract_right_coxa(node: hou.SopNode) -> None:
-    from .pedipalp.builder import extract_required_points as pedipalp_extract
+    from .pedipalp.build import extract_required_points as pedipalp_extract
 
     geo = node.geometry()
     socket_prims = [
