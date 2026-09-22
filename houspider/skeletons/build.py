@@ -8,10 +8,13 @@ def build(
     parent: hou.OpNode,
     name: str = "skeleton",
     input_node: hou.SopNode | None = None,
+    parameter_node: hou.SopNode | None = None,
 ) -> hou.OpNode:
     skeleton = _add_skeleton(parent, name)
     if input_node is not None:
         skeleton.setInput(0, input_node)
+    if parameter_node is not None:
+        skeleton.setInput(1, parameter_node)
 
     source = skeleton.indirectInputs()[0]
     body_skel = sopify(skeleton, source, topology.build_body_skeleton)

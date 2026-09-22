@@ -1,27 +1,16 @@
 import math
 
 import hou
-from houkit.attributer import add_global_attrib, add_prim_attrib
+from houkit.attributer import add_prim_attrib
 from houkit.geomath import rotation_to
 from houkit.noder import get_control, get_parent
-from houkit.parameterizer import get_float_parm, get_parms
+from houkit.parameterizer import get_parms
 from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_positions
 
-from .attributes import LegParam
-from .cubes import build_leg
-from .pedipalp.attributes import tmp_front_socket_size
-from ..attributes import GlobalAttrib
 from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
 from ..helper import points_from_geo
-
-
-def record_global_info(
-    node: hou.SopNode,
-) -> None:
-    geo = node.geometry()
-    parent = get_parent(node)
-    control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
-    add_global_attrib(geo, GlobalAttrib.SPINE_RATIO, control_params.segment_bulge_bias_ratio)
+from ..segments.attributes import LegParam
+from ..segments.build import build_leg
 
 
 def extrude_legs(
@@ -75,11 +64,10 @@ def _get_leg_param(
 ) -> LegParam:
     geo = node.geometry()
     parent = get_parent(node)
-
     params = get_parms(parent, use_tuple=False)
     control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
 
-    front_socket_width, _ = geo.attribValue(tmp_front_socket_size())
+    front_socket_width = get_front_coxa_socket_width(geo)
     front_coxa_width = front_socket_width * params.front_coxa_width_length_ratios.x()
     front_coxa_length = front_socket_width * params.front_coxa_width_length_ratios.y()
 
@@ -124,7 +112,8 @@ def _adjust_coxa(
     coxa_start_support_pts = coxa_points[4:8]
     coxa_end_pts = coxa_points[12:16]
 
-    coxa_start_wedge_angle = get_float_parm(get_control(node, "CONTROL"), "coxa_start_wedge_angle")
+    control_params = get_parms(get_control(get_parent(node), "CONTROL"), use_tuple=False)
+    coxa_start_wedge_angle = control_params.coxa_start_wedge_angle
     adjusted_support_positions = _get_adjusted_coxa_support_positions(
         socket_points,
         coxa_end_pts,
@@ -133,7 +122,7 @@ def _adjust_coxa(
     for point, position in zip(coxa_start_support_pts, adjusted_support_positions):
         point.setPosition(position)
 
-    support_loop_ratio = get_float_parm(get_control(node, "CONTROL"), "joint_support_loop_ratio")
+    support_loop_ratio = control_params.joint_support_loop_ratio
     buffer_ratio = _get_coxa_buffer_ratio(
         socket_points,
         coxa_start_pts,
@@ -240,3 +229,12 @@ def _build_coxa_socket_faces(
     fill_face([su1, sb1, mid_b, mid_u])
     fill_face([mid_u, mid_b, b_eb1, b_eu1])
     fill_face([b_eu1, b_eb1, eb1, eu1])
+
+
+def get_front_coxa_socket_width(geo: hou.Geometry) -> float:
+    pos_top_sz, pos_top_bz = points_from_geo(
+        geo,
+        basecoxamemebrane(1, 4),
+        basecoxamemebrane(1, 3),
+    )
+    return (pos_top_bz.position() - pos_top_sz.position()).length()

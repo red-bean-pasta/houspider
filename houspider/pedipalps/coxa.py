@@ -1,15 +1,15 @@
 import hou
 
 from houkit.geomath import is_zero_approx, line_intersect_face, line_intersect_line
-from houkit.noder import get_control
+from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_float_parm, get_parms
 from houkit.topology import fill_face
 
-from .attributes import tmp_coxa_corner, tmp_coxa_end, tmp_coxa_start, tmp_coxa_support, tmp_maxilla_pole, tmp_chelicerae_start_z
+from ..cheliceraes.attributes import cheliceraestartmembranesupport
+from .attributes import tmp_coxa_corner, tmp_coxa_end, tmp_coxa_start, tmp_coxa_support, tmp_maxilla_pole
 from .geometry import get_buffer_dist_z, get_coxa_base_direction
-from .helper import get_leg
-from ...bases.attributes import basemaxillamembrane
-from ...helper import add_id_point, points_from_geo, positions_from_geo
+from ..bases.attributes import basemaxillamembrane
+from ..helper import add_id_point, points_from_geo, positions_from_geo
 
 
 def fill_bottom_right_face(node: hou.SopNode) -> None:
@@ -52,7 +52,11 @@ def fill_top_face(node: hou.SopNode) -> None:
     direction = get_coxa_base_direction(geo)
     assert not is_zero_approx(direction.z())
 
-    target_z = geo.floatAttribValue(tmp_chelicerae_start_z())
+    base = get_parent(node).input(0)
+    target_z = points_from_geo(
+        base.geometry(),
+        cheliceraestartmembranesupport(4),
+    )[0].position().z()
     z_offset = target_z - e2.position().z()
     offset = z_offset / direction.z() * direction
     pos = e2.position() + offset
@@ -72,8 +76,8 @@ def add_maxilla_quads(node: hou.SopNode) -> None:
 
 def _get_maxilla_pole(node: hou.SopNode) -> hou.Vector3:
     geo: hou.Geometry = node.geometry()
-    leg = get_leg(node)
-    length_ratio = get_float_parm(leg, "endite_length_ratio")
+    pedipalp = get_parent(node)
+    length_ratio = get_float_parm(pedipalp, "endite_length_ratio")
 
     e1, e2, e3, m1, m2, m4, ct2 = points_from_geo(
         geo,

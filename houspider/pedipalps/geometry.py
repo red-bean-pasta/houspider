@@ -1,19 +1,17 @@
 import hou
-from houkit.attributer import points_start_with, remove_attribs
+from houkit.attributer import points_start_with
 from houkit.geomath import rotation_to
 from houkit.models import Moject
-from houkit.noder import get_control
-from houkit.parameterizer import get_float_parm, get_parms
+from houkit.noder import get_control, get_parent
+from houkit.parameterizer import get_parms
 from houkit.topologies.basic import remove_unused_points
 from houkit.topology import fill_face
 
-from .attributes import tmp_coxa_corner, tmp_coxa_end, tmp_coxa_start, tmp_coxa_support, tmp_front_socket_size, \
-    tmp_chelicerae_start_z
-from .helper import get_leg
-from ..attributes import LegParam, Region
-from ..cubes import build_leg
-from ...bases.attributes import basemaxillamembrane
-from ...helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
+from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
+from ..helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
+from ..segments.attributes import LegParam, Region
+from ..segments.build import build_leg
+from .attributes import tmp_coxa_corner, tmp_coxa_end, tmp_coxa_start, tmp_coxa_support
 
 
 def remove_noise_points(
@@ -28,7 +26,7 @@ def remove_noise_points(
 def build_basic(
     node: hou.SopNode,
 ) -> None:
-    _, warnings = _build_cubes(node)
+    _, warnings = _build_segments(node)
     for w in warnings:
         node.addWarning(w)
 
@@ -126,8 +124,6 @@ def cleanup(node: hou.SopNode) -> None:
     pts = points_start_with(geo, "id", "tmp_")
     for p in pts:
         set_point_id(p, "")
-    remove_attribs(geo, global_attributes=(tmp_chelicerae_start_z(),))
-
     for prim in geo.prims():
         if not prim.stringAttribValue("region"):
             prim.setAttribValue("region", Region.LEGSEGMENT)
@@ -135,7 +131,7 @@ def cleanup(node: hou.SopNode) -> None:
     remove_unused_points(geo)
 
 
-def _build_cubes(
+def _build_segments(
     node: hou.SopNode,
 ) -> Moject[tuple[list[hou.Point], list[hou.Point], list[hou.Point]]]:
     geo = node.geometry()
@@ -166,19 +162,27 @@ def _get_pedipalp_param(
     node: hou.SopNode,
 ) -> LegParam:
     geo = node.geometry()
-    leg = get_leg(node)
+    pedipalp = get_parent(node)
+    params = get_parms(pedipalp, use_tuple=False)
 
-    params = get_parms(leg, use_tuple=False)
-    control_params = get_parms(get_control(leg, "CONTROL"), use_tuple=False)
+    legs = _get_legs_node(node)
+    leg_params = get_parms(legs, use_tuple=False)
+    control_params = get_parms(get_control(legs, "CONTROL"), use_tuple=False)
+
+    base = pedipalp.input(0)
+    front_coxa_length = (
+        _get_front_coxa_socket_width(base.geometry())
+        * leg_params.front_coxa_width_length_ratios.y()
+    )
 
     coxa_width_length = _get_pedipalp_coxa_width_length(
         geo,
-        params.front_coxa_width_length_ratios.y(),
+        front_coxa_length,
         params.pedipalp_coxa_length,
     )
     length_ratios = tuple(params.pedipalp_segment_length_ratios)
-    max_segment_yaws = tuple(params.max_yaw_angles)[:len(length_ratios)]
-    min_segment_flexes = tuple(params.min_flex_angles)[:len(length_ratios)]
+    max_segment_yaws = tuple(leg_params.max_yaw_angles)[:len(length_ratios)]
+    min_segment_flexes = tuple(leg_params.min_flex_angles)[:len(length_ratios)]
 
     return LegParam.from_specs(
         coxa_width_length=coxa_width_length,
@@ -196,13 +200,11 @@ def _get_pedipalp_param(
 
 def _get_pedipalp_coxa_width_length(
     geo: hou.Geometry,
-    front_coxa_length_ratio: float,
+    front_coxa_length: float,
     pedipalp_coxa_length: float,
 ) -> tuple[float, float]:
     m3, m4 = positions_from_geo(geo, basemaxillamembrane(3), basemaxillamembrane(4))
     width = m3.distanceTo(m4)
-    front_socket_width, _ = geo.attribValue(tmp_front_socket_size())
-    front_coxa_length = front_socket_width * front_coxa_length_ratio
     length = front_coxa_length * pedipalp_coxa_length
     return width, length
 
@@ -213,6 +215,21 @@ def _get_pedipalp_points(
     if not pts:
         return list(geo.points())
     return list(pts)
+
+
+def _get_legs_node(node: hou.SopNode) -> hou.SopNode:
+    legs = get_parent(node).input(1)
+    assert legs is not None, "Expected legs as pedipalps input 1"
+    return legs
+
+
+def _get_front_coxa_socket_width(geo: hou.Geometry) -> float:
+    pos_top_sz, pos_top_bz = points_from_geo(
+        geo,
+        basecoxamemebrane(1, 4),
+        basecoxamemebrane(1, 3),
+    )
+    return (pos_top_bz.position() - pos_top_sz.position()).length()
 
 
 
@@ -257,8 +274,8 @@ def _calculate_base_trapezoid_points(
     pos_mid_bottom: hou.Vector3,
 ) -> tuple[hou.Vector3, hou.Vector3, float]:
     geo = node.geometry()
-    leg = get_leg(node)
-    wedge_angle = get_float_parm(get_control(leg, "CONTROL"), "coxa_start_wedge_angle")
+    legs = _get_legs_node(node)
+    wedge_angle = get_parms(get_control(legs, "CONTROL"), use_tuple=False).coxa_start_wedge_angle
 
     m4 = points_from_geo(geo, basemaxillamembrane(4))[0]
     neg_z = hou.Vector3(0.0, 0.0, -1.0)

@@ -4,8 +4,8 @@ import hou
 
 from houkit.models import Moject
 
-from ..attributes import LegParam, Region
-from ...helper import bridge_loops
+from ..helper import bridge_loops
+from .attributes import LegParam, Region
 
 def build_segment_tubes(
     geo: hou.Geometry,

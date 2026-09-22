@@ -1,22 +1,21 @@
 import hou
 
-from houkit.attributer import add_global_attrib
-from houkit.noder import add_fuse, add_output, add_reloadable_subnet
+from houkit.noder import add_fuse, add_mirror, add_output, add_reloadable_subnet, sopify
 from houkit.parameterizer import add_float_parm, add_heading
 
-from .attributes import tmp_chelicerae_start_z
-from ...bases.attributes import basemaxillamembrane
-from ...helper import points_from_geo, sopify_chain
-from ...cheliceraes.attributes import cheliceraestartmembranesupport
+from ..helper import rename_left_ids_node, sopify_chain
 from . import topology
 
 
 def build(
     parent: hou.SopNode,
-    input_node: hou.SopNode,
+    base: hou.SopNode,
+    legs: hou.SopNode,
 ) -> hou.SopNode:
-    pedipalp = add_reloadable_subnet(parent, "pedipalp")
-    pedipalp.setInput(0, input_node)
+    pedipalp = add_reloadable_subnet(parent, "pedipalps")
+    pedipalp.setInput(0, base)
+    pedipalp.setInput(1, legs)
+    add_parameters(pedipalp)
     _add_controls(pedipalp)
 
     cleaned_up = sopify_chain(
@@ -40,7 +39,9 @@ def build(
         ),
     )
     fused = add_fuse(pedipalp, "fuse_sockets", cleaned_up)
-    add_output(pedipalp, "OUT_PEDIPALP", fused)
+    mirrored = add_mirror(pedipalp, "mirror_left_pedipalps", fused, (1, 0, 0), True, False)
+    renamed = sopify(pedipalp, mirrored, rename_left_ids_node)
+    add_output(pedipalp, "OUT_PEDIPALPS", renamed)
     pedipalp.layoutChildren()
     return pedipalp
 
@@ -66,7 +67,7 @@ def add_parameters(subnet: hou.OpNode) -> None:
         (0.0, None),
         hou.parmNamingScheme.Base1,
         label="Other Segment Lengths",
-        help="One length ratio per post-coxa pedipalp segment, measured against pedipalp coxa length.",
+        help="One length ratio per post-coxa pedipalps segment, measured against pedipalps coxa length.",
     )
     add_float_parm(
         subnet,
@@ -76,31 +77,6 @@ def add_parameters(subnet: hou.OpNode) -> None:
         label="Endite Length",
         help="Extension from the endite membrane attachment toward the coxa.",
     )
-
-
-def prepare_attributed_data(geo: hou.Geometry) -> None:
-    cs4, = points_from_geo(
-        geo,
-        cheliceraestartmembranesupport(4),
-    )
-    add_global_attrib(
-        geo,
-        tmp_chelicerae_start_z(),
-        cs4.position().z()
-    )
-
-
-def extract_required_points(
-    geo: hou.Geometry
-) -> set[hou.Point]:
-    retained = points_from_geo(
-        geo,
-        basemaxillamembrane(1),
-        basemaxillamembrane(2),
-        basemaxillamembrane(3),
-        basemaxillamembrane(4),
-    )
-    return set(retained)
 
 
 def _add_controls(parent: hou.SopNode) -> hou.SopNode:

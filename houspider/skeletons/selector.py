@@ -5,7 +5,7 @@ from houkit.attributings.querier import points_start_with
 from houkit.topologies.helper import is_neighbor
 
 from houspider.bases.attributes import basecoxamemebrane, basemaxillamembrane
-from ..legs.attributes import Region
+from ..segments.attributes import Region
 
 
 def get_coxa_socket_points(

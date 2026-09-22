@@ -12,6 +12,7 @@ from ..abdomens.build import build as build_abdomen
 from ..cephalothoraxes.build import build as build_cephalothorax
 from ..legs.build import build as build_legs
 from ..pedicels.build import build as build_pedicel
+from ..pedipalps.build import build as build_pedipalps
 from . import topology
 
 
@@ -30,9 +31,16 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
     fused_ca_p = add_fuse(spider, "fuse_main_and_pedicel", merged_ca_p)
     removed_sockets = sopify(spider, fused_ca_p, topology.remove_coxa_sockets)
 
-    legs = build_legs(spider, fused_ca_p)
-    merged_all = add_merge(spider, "merge_main_and_legs", removed_sockets, legs)
-    fused = add_fuse(spider, "fuse_main_and_legs", merged_all)
+    legs = build_legs(spider, removed_sockets)
+    pedipalps = build_pedipalps(spider, removed_sockets, legs)
+    merged_all = add_merge(
+        spider,
+        "merge_main_legs_pedipalps",
+        removed_sockets,
+        legs,
+        pedipalps,
+    )
+    fused = add_fuse(spider, "fuse_main_legs_pedipalps", merged_all)
 
     recalculated = add_recalculate_normal(spider, "recalculate_normals", fused)
     _add_subdivide(spider, "debug_subdivision", recalculated, depth=3)

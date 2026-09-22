@@ -5,8 +5,8 @@ import hou
 from houkit.attributer import add_prim_attrib
 from houkit.topology import loop_cut, points_to_positions
 
-from ...helper import bridge_loops, fill_face_with_attr, points_from_loop_cut
-from ..attributes import Region
+from ..helper import bridge_loops, fill_face_with_attr, points_from_loop_cut
+from .attributes import Region
 
 
 def inset_segment_thickness(

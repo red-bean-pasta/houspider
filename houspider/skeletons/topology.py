@@ -2,6 +2,8 @@ from typing import Callable, Sequence, Iterable
 
 import hou
 from houkit.attributer import add_point_attrib
+from houkit.noder import get_control, get_parent
+from houkit.parameterizer import get_parms
 from houkit.topology import add_point
 
 from .attributes import (
@@ -32,13 +34,15 @@ def build_body_skeleton(node: hou.SopNode) -> None:
 
 
 def build_leg_skeletons(node: hou.SopNode) -> None:
+    spine_ratio = _get_spine_ratio(node)
+
     def _get_bone_positions(geo: hou.Geometry) -> Iterable[Iterable[tuple[str, hou.Vector3]]]:
         joint_poses_by_branch: list[Iterable[tuple[str, hou.Vector3]]] = []
         for is_right in (True, False):
             for i in range(1, 5):
                 positions = zip(
                     [leg_joint_name(is_right, i, j) for j in LegJoint],
-                    get_leg_bone_positions(geo, is_right, i)
+                    get_leg_bone_positions(geo, is_right, i, spine_ratio)
                 )
                 joint_poses_by_branch.append(positions)
         return joint_poses_by_branch
@@ -47,12 +51,14 @@ def build_leg_skeletons(node: hou.SopNode) -> None:
 
 
 def build_pedipalps_skeleton(node: hou.SopNode) -> None:
+    spine_ratio = _get_spine_ratio(node)
+
     def _get_bone_positions(geo: hou.Geometry) -> Iterable[Iterable[tuple[str, hou.Vector3]]]:
         joint_poses_by_branch: list[Iterable[tuple[str, hou.Vector3]]] = []
         for is_right in (True, False):
             positions = zip(
                 [pedipalp_joint_name(is_right, j) for j in PedipalpJoint],
-                get_pedipalp_bone_positions(geo, is_right)
+                get_pedipalp_bone_positions(geo, is_right, spine_ratio)
             )
             joint_poses_by_branch.append(positions)
         return joint_poses_by_branch
@@ -81,6 +87,14 @@ def _build_branch_skeletons(
             named_poses_branch
         ]
         _wire_branch_polyline(geo, [root_pt, *leg_pts])
+
+
+def _get_spine_ratio(node: hou.SopNode) -> float:
+    geometry = get_parent(node).input(1)
+    assert geometry is not None, "Expected geometry as skeleton input 1"
+    legs = geometry.node("legs")
+    assert legs is not None, "Expected legs under the spider geometry subnet"
+    return get_parms(get_control(legs, "CONTROL"), use_tuple=False).segment_bulge_bias_ratio
 
 
 def _wire_branch_polyline(
