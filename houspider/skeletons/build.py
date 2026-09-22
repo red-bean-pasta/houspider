@@ -22,7 +22,7 @@ def build(
     fused = add_fuse(skeleton, "fuse_root", merged)
 
     rig_doctor = _add_rig_doctor(skeleton, "rig_doctor", fused)
-    rig_pose = pose.add_leg_rig_pose(skeleton, rig_doctor)
+    rig_pose = pose.add_rig_pose(skeleton, rig_doctor)
     add_output(skeleton, "OUT_SKELETON", rig_pose)
 
     captured_skin = skinning.capture_skin(skeleton, source)
