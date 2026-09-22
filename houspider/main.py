@@ -13,8 +13,7 @@ def build() -> hou.OpNode:
 
     geometry = builds.build_spider(spider_node, name="geometry")
 
-    skel = builds.build_skeleton(spider_node, name="skeleton")
-    skel.setInput(0, geometry)
+    skel = builds.build_skeleton(spider_node, name="skeleton", input_node=geometry)
 
     _propagate_parameters(spider_node)
 

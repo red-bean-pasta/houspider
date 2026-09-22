@@ -10,7 +10,7 @@ from .attributes import (
     PedipalpJoint,
     body_joint_name, pedipalp_joint_name, leg_joint_name,
 )
-from .spine import (
+from .chain import (
     get_body_bone_positions,
     get_leg_bone_positions,
     get_pedipalp_bone_positions,

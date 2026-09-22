@@ -1,6 +1,7 @@
 from typing import Collection
 
 import hou
+from hou import OpNode, SopNode
 from houkit.noder import sopify
 
 from .attributes import (
@@ -23,16 +24,29 @@ from .selector import (
 
 
 def capture_skin(
-    parent: hou.SopNode,
-    skin_source: hou.SopNode,
-) -> hou.SopNode:
+    parent: OpNode,
+    skin_source: SopNode,
+) -> SopNode:
     weighted = sopify(parent, skin_source, assign_skin_weights)
     pack = parent.createNode("captureattribpack", "pack_capture")
     pack.setInput(0, weighted)
     return pack
 
 
-def assign_skin_weights(node: hou.SopNode) -> None:
+def deform_skin(
+    parent: OpNode,
+    captured_skin: SopNode,
+    capture_pose: SopNode,
+    animated_pose: SopNode,
+) -> SopNode:
+    deform = parent.createNode("kinefx::jointdeform", "joint_deform")
+    deform.setInput(0, captured_skin)
+    deform.setInput(1, capture_pose)
+    deform.setInput(2, animated_pose)
+    return deform
+
+
+def assign_skin_weights(node: SopNode) -> None:
     geo = node.geometry()
     bone_names = _collect_bone_names()
     bone_indexes = {name: i for i, name in enumerate(bone_names)}
