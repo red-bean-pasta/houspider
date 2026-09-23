@@ -148,7 +148,7 @@ def _skin_limb(
     seg_pts = [p for p in points if p not in soft_pts]
     for p in seg_pts:
         z = get_local_z_value(p, direction)
-        assigned_joint = joint_indices[-1]
+        assigned_joint = joint_indices[-2]
         for m_idx, z_mid in enumerate(membrane_centers):
             if z < z_mid:
                 assigned_joint = joint_indices[m_idx]
