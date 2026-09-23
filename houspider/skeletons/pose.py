@@ -1,32 +1,28 @@
 import hou
 from houkit.skeleton import get_named_point_alignment_rotation
+from houkit.noder import add_rig_pose
 
 from .attributes import LegJoint, leg_joint_name, body_joint_name, BodyJoint, pedipalp_joint_name, PedipalpJoint
 
 
-def add_rig_pose(
+
+
+
+# Legacy
+def add_align_rig_pose(
     parent: hou.OpNode,
     input_node: hou.SopNode,
 ) -> hou.SopNode:
-    pose = parent.createNode("kinefx::rigpose", "rig_pose")
-    pose.setInput(0, input_node)
-
     geo = input_node.geometry()
-    rotations = (
-        [_get_pedicel_rotations(geo)]
-        + _get_leg_rotations(geo)
-        # + _get_pedipalp_rotations(geo) # Not straightened by design
+    return add_rig_pose(
+        parent,
+        input_node,
+        _get_pedicel_align_rotations(geo),
+        *_get_leg_align_rotations(geo),
+        *_get_pedipalp_align_rotations(geo),
     )
-    pose.parm("transformations").set(len(rotations))
-    for index, (name, rotation) in enumerate(rotations):
-        pose.parm(f"group{index}").set(f"@name={name}")
-        pose.parm(f"xOrd{index}").set("srt")
-        pose.parm(f"rOrd{index}").set("xyz")
-        pose.parmTuple(f"r{index}").set(tuple(rotation))
-    return pose
 
-
-def _get_pedicel_rotations(
+def _get_pedicel_align_rotations(
     geo: hou.Geometry,
 ) -> tuple[str, hou.Vector3]:
     pedicel_name = body_joint_name(BodyJoint.PEDICEL)
@@ -38,7 +34,7 @@ def _get_pedicel_rotations(
     )
     return pedicel_name, rotation
 
-def _get_pedipalp_rotations(
+def _get_pedipalp_align_rotations(
     geo: hou.Geometry,
 ) -> list[tuple[str, hou.Vector3]]:
     rotations: list[tuple[str, hou.Vector3]] = []
@@ -53,7 +49,7 @@ def _get_pedipalp_rotations(
         rotations.append((trochanter_name, rotation))
     return rotations
 
-def _get_leg_rotations(
+def _get_leg_align_rotations(
     geo: hou.Geometry,
 ) -> list[tuple[str, hou.Vector3]]:
     rotations: list[tuple[str, hou.Vector3]] = []

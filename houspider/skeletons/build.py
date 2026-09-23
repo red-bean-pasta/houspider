@@ -1,7 +1,7 @@
 import hou
 
 from houkit.noder import add_fuse, add_merge, add_output, add_reloadable_subnet, sopify
-from . import pose, skinning, topology
+from . import skinning, topology
 
 
 def build(
@@ -22,12 +22,12 @@ def build(
     fused = add_fuse(skeleton, "fuse_root", merged)
 
     rig_doctor = _add_rig_doctor(skeleton, "rig_doctor", fused)
-    rig_pose = pose.add_rig_pose(skeleton, rig_doctor)
-    add_output(skeleton, "OUT_SKELETON", rig_pose)
+    add_output(skeleton, "OUT_SKELETON", rig_doctor)
 
     captured_skin = skinning.capture_skin(skeleton, source)
-    deformed_skin = skinning.deform_skin(skeleton, captured_skin, rig_doctor, rig_pose)
-    add_output(skeleton, "OUT_SKIN", deformed_skin)
+
+    # deformed_skin = skinning.deform_skin(skeleton, captured_skin, rig_doctor, rig_doctor)
+    add_output(skeleton, "OUT_SKIN", captured_skin)
 
     skeleton.layoutChildren()
     return skeleton
