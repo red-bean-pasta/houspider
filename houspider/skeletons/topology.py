@@ -60,6 +60,16 @@ def build_pedipalps_skeleton(node: hou.SopNode) -> None:
     _build_branch_skeletons(node.geometry(), _get_bone_positions)
 
 
+def add_ik_tags(node: hou.SopNode) -> None:
+    geo = node.geometry()
+    tags = geo.addArrayAttrib(hou.attribType.Point, "tags", hou.attribData.String)
+
+    for point in geo.points():
+        name = point.stringAttribValue("name")
+        tag = "_".join(name.split("_")[:2]) if name.startswith("leg_") else ""
+        point.setAttribValue(tags, (tag,) if tag else ())
+
+
 def _build_branch_skeletons(
         geo: hou.Geometry,
         get_branch_positions: Callable[
