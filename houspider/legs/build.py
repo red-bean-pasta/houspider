@@ -41,42 +41,42 @@ def _add_parameters(legs: hou.OpNode) -> None:
     add_float_parm(
         legs,
         "min_flex_angles",
-        6,
-        (180, 200, 30, 95, 150, 170),
+        7,
+        (140, 180, 200, 30, 150, 95, 170),
         (0.0, None),
         hou.parmNamingScheme.Base1,
         label="Minimum Flex Angles",
-        help="One minimum flex angle per post-coxa segment joint.",
+        help="One minimum flex angle per segment joint.",
     )
     add_float_parm(
         legs,
         "max_flex_angles",
-        6,
-        (180, 270, 160, 190, 178, 190),
+        7,
+        (220, 180, 270, 160, 190, 178, 190),
         (0.0, None),
         hou.parmNamingScheme.Base1,
         label="Maximum Flex Angles",
-        help="One maximum flex angle per post-coxa segment joint.",
+        help="One maximum flex angle per segment joint.",
     )
     add_float_parm(
         legs,
         "min_yaw_angles",
-        6,
-        (0, 0, 0, 0, 0, 0),
+        7,
+        (-15, -25, 0, 0, 0, 0, -20),
         (None, None),
         hou.parmNamingScheme.Base1,
         label="Minimum Yaw Angles",
-        help="One minimum yaw angle per post-coxa segment joint.",
+        help="One minimum yaw angle per segment joint.",
     )
     add_float_parm(
         legs,
         "max_yaw_angles",
-        6,
-        (25, 0, 0, 0, 0, 20),
+        7,
+        (15, 25, 0, 0, 0, 0, 20),
         (0.0, None),
         hou.parmNamingScheme.Base1,
         label="Maximum Yaw Angles",
-        help="One maximum yaw angle per post-coxa segment joint.",
+        help="One maximum yaw angle per segment joint.",
     )
     add_heading(legs, "Front Leg")
     add_float_parm(

@@ -18,7 +18,7 @@ This project is heavily based the point and primitive attribute system in Houdin
 At the end of most tasks, you need to rerun `hython test_builder.py` and reinspect the regenerated `test.hip` to see if there's any errors. But if the task is deliberate half-way under the user's instruction, you can skip it. 
 
 # Other agent instructions
-You don't need to over-think. If the task is simple, you can simply do it. It's also encouraged to adopt the "inspect code + write code + try + error + debug" than "inspect files". You don't need to be 100% confident before making changes.
+You don't need to over-think. If the task is simple, you can simply do it. It's also encouraged to adopt the "inspect code + write code + try + error + debug" than "inspect files". You don't need to be 100% confident before making changes. Do not walk through and make sure of everything before attempting the task. That results in huge resource waste and is not acceptable. 
 Many of the time, your operations are prompted to user by ACP or MCP. You can always comment the intention, so that the user has a better understanding on what stage we are at, if your direction is wrong or what the code is for.
 You can always actively prompt for clarification, answer for multiple choices etc. The user may not write the best prompt, clarify their need enough and may have typos and reference errors, you can always point them out and ask for clarification. 
 For file editing, prefer ACP tool `client_edit_file`. It's discouraged to use `apply_patch`, `pycharm_execute_terminal_command` and python's `file.write` because their formatting is hard for user to inspect. 
@@ -28,7 +28,7 @@ No Latex Output. Use only MarkDown. LaTex have problem rendering in PyCharm.
 You can use git stash, commit and branch. But those are quite powerful moves so always clarify your intent then ask for permit. 
 Response when you are confident enough. Don't be paranoid and spend forever verifying or inspecting. Those efforts are not appreciated and will only waste user's time.
 You can always record your thoughts, findings, summaries or any other necessary stuff to `.aiassistant/tmp/`, if it helps your work.
-You can use `hhelp` to query Houdini documents instead of manually inspecting source python files, e.g., `hhelp html /nodes/sop/kinefx--capturepackedgeo.html`. 
+You can use `hhelp` to query Houdini documents instead of manually inspecting source python files, e.g., `hhelp html /nodes/sop/kinefx--capturepackedgeo.html`. `hhelp html` is the correct command and not a typo.
 
 # Examples
 ## Example for inspecting output HIP file

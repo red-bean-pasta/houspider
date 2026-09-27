@@ -181,8 +181,8 @@ def _get_pedipalp_param(
         params.pedipalp_coxa_length,
     )
     length_ratios = tuple(params.pedipalp_segment_length_ratios)
-    max_segment_yaws = tuple(leg_params.max_yaw_angles)[:len(length_ratios)]
-    min_segment_flexes = tuple(leg_params.min_flex_angles)[:len(length_ratios)]
+    max_segment_yaws = tuple(leg_params.max_yaw_angles)[1:len(length_ratios) + 1]
+    min_segment_flexes = tuple(leg_params.min_flex_angles)[1:len(length_ratios) + 1]
 
     return LegParam.from_specs(
         coxa_width_length=coxa_width_length,

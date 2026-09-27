@@ -108,8 +108,8 @@ def _get_leg_param(
     return LegParam.from_specs(
         coxa_width_length=coxa_width_length,
         length_ratios=tuple(params.front_segment_length_ratios),
-        max_segment_yaws=tuple(params.max_yaw_angles),
-        min_segment_flexes=tuple(params.min_flex_angles),
+        max_segment_yaws=tuple(params.max_yaw_angles)[1:],
+        min_segment_flexes=tuple(params.min_flex_angles)[1:],
         coxa_trochanter_height_ratio=control_params.coxa_trochanter_height_ratio,
         other_segment_height_ratio=control_params.other_segment_height_ratio,
         spine_ratio=control_params.segment_bulge_bias_ratio,

@@ -6,6 +6,7 @@ import hou
 from houkit.noder import add_fuse, add_merge, add_output, add_reloadable_subnet, sopify
 from ..attributes import GlobalAttrib
 from . import skinning, topology
+from .attributes import LegJoint
 
 # The skeleton design in Houdini is so over-engineered...
 
@@ -29,10 +30,9 @@ def build(
 
     rig_doctor = _add_rig_doctor(skeleton, "rig_doctor", fused)
     tagged = sopify(skeleton, rig_doctor, topology.add_ik_tags)
-    rig_stash = _add_rig_stash(skeleton, "rig_stash", tagged)
 
     captured_skin = skinning.capture_skin(skeleton, source)
-    character = _add_pack_character(skeleton, "pack_character", captured_skin, rig_stash)
+    character = _add_pack_character(skeleton, "pack_character", captured_skin, tagged)
 
     multi_ik = _add_multi_ik(skeleton, "multi_ik", character)
     joint_limits = input_node.geometry().attribValue(GlobalAttrib.JOINT_LIMITS)
@@ -70,16 +70,6 @@ def _add_rig_doctor(
     return rd
 
 
-def _add_rig_stash(
-    parent: hou.OpNode,
-    name: str,
-    input_node: hou.SopNode,
-) -> hou.SopNode:
-    rs = parent.createNode("kinefx::rigstashpose", name)
-    rs.setInput(0, input_node)
-    return rs
-
-
 def _add_pack_character(
     parent: hou.OpNode,
     name: str,
@@ -112,7 +102,6 @@ def _add_multi_ik(
 
     ik.parm("solver").set(1)
     ik.parm("segments").set("leg_*")
-    ik.parm("driven").set("%tag(bind)")
 
     return ik
 
@@ -144,13 +133,12 @@ def _add_multi_ik_constraints(
     min_yaw = joint_limits["min_yaw_angles"]
     max_yaw = joint_limits["max_yaw_angles"]
     assert len(min_flex) == len(max_flex) == len(min_yaw) == len(max_yaw), "Joint-limit arrays must have equal lengths."
+    joint_limit_specs = tuple(zip(min_flex, max_flex, min_yaw, max_yaw))
+    assert len(joint_limit_specs) == len(LegJoint) - 1, "Expected one constraint for each leg joint through the tarsus."
 
-    count = len(min_flex)
+    count = len(joint_limit_specs)
     constraints.parm("limits").set(count)
-    for index, (lo_flex, hi_flex, lo_yaw, hi_yaw) in enumerate(
-        zip(min_flex, max_flex, min_yaw, max_yaw),
-        1,
-    ):
+    for index, (lo_flex, hi_flex, lo_yaw, hi_yaw) in enumerate(joint_limit_specs, 1):
         constraints.parmTuple(f"lower{index}").set((
             math.radians(lo_flex - 180.0),
             math.radians(lo_yaw),
