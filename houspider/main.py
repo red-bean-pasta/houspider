@@ -18,6 +18,7 @@ def build() -> hou.OpNode:
         name="skeleton",
         input_node=geometry,
     )
+    skel.setDisplayFlag(True)
 
     _propagate_parameters(spider_node)
 
