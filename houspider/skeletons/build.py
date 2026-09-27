@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import hou
 
@@ -109,6 +110,7 @@ def _add_multi_ik(
     # HOM parameter changes do not run the component source callback.
     ik.hdaModule().onComponentSourceUpdated({"node": ik, "parm": ik.parm("componentsource")})
 
+    ik.parm("solver").set(1)
     ik.parm("segments").set("leg_*")
     ik.parm("driven").set("%tag(bind)")
 
@@ -122,8 +124,16 @@ def _add_multi_ik_constraints(
     joint_limits: dict[str, tuple[float, ...]],
 ) -> hou.SopNode:
     constraints = parent.createNode("apex::autorigcomponent::3.0", name)
+    constraints.parm("inputguidename").set("Guides.skel")
     constraints.setInput(0, input_node)
-    constraints.parm("componentsource").set("multi_ik_constraints")
+    constraints.parm("componentsource").set("__SNIPPET__")
+    constraints.parm("snippet").set(
+        (
+            Path(__file__).resolve().parents[2]
+            / "apexcomponent"
+            / "multi_ik_constraints.apex"
+        ).read_text()
+    )
     constraints.hdaModule().onComponentSourceUpdated({
         "node": constraints,
         "parm": constraints.parm("componentsource"),
@@ -133,7 +143,7 @@ def _add_multi_ik_constraints(
     max_flex = joint_limits["max_flex_angles"]
     min_yaw = joint_limits["min_yaw_angles"]
     max_yaw = joint_limits["max_yaw_angles"]
-    assert len(max_flex) == len(min_yaw) == len(max_yaw) == len(max_yaw), "Joint-limit arrays must have equal lengths."
+    assert len(min_flex) == len(max_flex) == len(min_yaw) == len(max_yaw), "Joint-limit arrays must have equal lengths."
 
     count = len(min_flex)
     constraints.parm("limits").set(count)
