@@ -2,6 +2,7 @@ import sys
 import textwrap
 from pathlib import Path
 
+import hou
 
 from houkit.developings.reloader import find_project_root
 
@@ -17,7 +18,13 @@ from houkit.developing import save
 def build() -> None:
     _set_session_module_source()
     spider = main.build()
-    spider.displayNode().geometry()
+    try:
+        spider.cook(force=True)
+    except hou.Error as error:
+        print(f"ERROR {spider.path()}: {error}")
+
+    for error in spider.errors():
+        print(f"ERROR {spider.path()}: {error}")
 
 def _set_session_module_source() -> None:
     """
@@ -42,8 +49,6 @@ def _set_session_module_source() -> None:
         if source_root not in sys.path:
             sys.path.insert(0, source_root)
     """)
-    import hou
-
     hou.setSessionModuleSource(hou_source)
 
 
