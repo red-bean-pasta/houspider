@@ -1,6 +1,9 @@
+import math
+
 import hou
 
 from houkit.noder import add_fuse, add_merge, add_output, add_reloadable_subnet, sopify
+from ..attributes import GlobalAttrib
 from . import skinning, topology
 
 # The skeleton design in Houdini is so over-engineered...
@@ -13,6 +16,7 @@ def build(
     skeleton = _add_skeleton(parent, name)
     if input_node is not None:
         skeleton.setInput(0, input_node)
+    assert input_node is not None
 
     source = skeleton.indirectInputs()[0]
     body_skel = sopify(skeleton, source, topology.build_body_skeleton)
@@ -28,8 +32,17 @@ def build(
 
     captured_skin = skinning.capture_skin(skeleton, source)
     character = _add_pack_character(skeleton, "pack_character", captured_skin, rig_stash)
+
     multi_ik = _add_multi_ik(skeleton, "multi_ik", character)
-    scene = _add_scene_add_character(skeleton, "scene_add_character", multi_ik)
+    joint_limits = input_node.geometry().attribValue(GlobalAttrib.JOINT_LIMITS)
+    multi_ik_constraints = _add_multi_ik_constraints(
+        skeleton,
+        "multi_ik_constraints",
+        multi_ik,
+        joint_limits,
+    ) # Multi IK ships an internal Multi Bone IK but doesn't expose joint constraints APIs
+
+    scene = _add_scene_add_character(skeleton, "scene_add_character", multi_ik_constraints)
     animator = _add_scene_animate(skeleton, "scene_animate", scene)
 
     output = add_output(skeleton, "OUT_EVALUATED", animator)
@@ -100,6 +113,47 @@ def _add_multi_ik(
     ik.parm("driven").set("%tag(bind)")
 
     return ik
+
+
+def _add_multi_ik_constraints(
+    parent: hou.OpNode,
+    name: str,
+    input_node: hou.SopNode,
+    joint_limits: dict[str, tuple[float, ...]],
+) -> hou.SopNode:
+    constraints = parent.createNode("apex::autorigcomponent::3.0", name)
+    constraints.setInput(0, input_node)
+    constraints.parm("componentsource").set("multi_ik_constraints")
+    constraints.hdaModule().onComponentSourceUpdated({
+        "node": constraints,
+        "parm": constraints.parm("componentsource"),
+    })
+
+    min_flex = joint_limits["min_flex_angles"]
+    max_flex = joint_limits["max_flex_angles"]
+    min_yaw = joint_limits["min_yaw_angles"]
+    max_yaw = joint_limits["max_yaw_angles"]
+    assert len(max_flex) == len(min_yaw) == len(max_yaw) == len(max_yaw), "Joint-limit arrays must have equal lengths."
+
+    count = len(min_flex)
+    constraints.parm("limits").set(count)
+    for index, (lo_flex, hi_flex, lo_yaw, hi_yaw) in enumerate(
+        zip(min_flex, max_flex, min_yaw, max_yaw),
+        1,
+    ):
+        constraints.parmTuple(f"lower{index}").set((
+            math.radians(lo_flex - 180.0),
+            math.radians(lo_yaw),
+            -math.pi,
+        ))
+        constraints.parmTuple(f"upper{index}").set((
+            math.radians(hi_flex - 180.0),
+            math.radians(hi_yaw),
+            math.pi,
+        ))
+        constraints.parmTuple(f"restangle{index}").set((0.0, 0.0, 0.0))
+
+    return constraints
 
 
 def _add_scene_add_character(

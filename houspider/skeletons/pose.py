@@ -4,10 +4,6 @@ from houkit.noder import add_rig_pose
 
 from .attributes import LegJoint, leg_joint_name, body_joint_name, BodyJoint, pedipalp_joint_name, PedipalpJoint
 
-
-
-
-
 # Legacy
 def add_align_rig_pose(
     parent: hou.OpNode,

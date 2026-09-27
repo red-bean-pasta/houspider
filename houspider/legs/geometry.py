@@ -17,10 +17,25 @@ from ..segments.build import build_leg
 def record_global_info(
     node: hou.SopNode,
 ) -> None:
-    geo = node.geometry()
     parent = get_parent(node)
+    geo = node.geometry()
+
     control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
     add_global_attrib(geo, GlobalAttrib.SPINE_RATIO, control_params.segment_bulge_bias_ratio)
+
+    params = get_parms(parent)
+    joint_limits = {
+        "min_flex_angles": tuple(params.min_flex_angles),
+        "max_flex_angles": tuple(params.max_flex_angles),
+        "min_yaw_angles": tuple(params.min_yaw_angles),
+        "max_yaw_angles": tuple(params.max_yaw_angles),
+    }
+    limits_attrib = add_global_attrib(
+        geo,
+        GlobalAttrib.JOINT_LIMITS,
+        joint_limits,
+    )
+    geo.setGlobalAttribValue(limits_attrib, joint_limits)
 
 
 def extrude_legs(
