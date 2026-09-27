@@ -31,11 +31,14 @@ def build(
     rig_doctor = _add_rig_doctor(skeleton, "rig_doctor", fused)
     tagged = sopify(skeleton, rig_doctor, topology.add_ik_tags)
 
+    joint_limits = input_node.geometry().attribValue(GlobalAttrib.JOINT_LIMITS)
+    posed_skeleton = _add_rig_pose(skeleton, "rig_pose", tagged, joint_limits)
+
     captured_skin = skinning.capture_skin(skeleton, source)
-    character = _add_pack_character(skeleton, "pack_character", captured_skin, tagged)
+    posed_skin = _add_skin_deform(skeleton, "deform_skin", captured_skin, tagged, posed_skeleton)
+    character = _add_pack_character(skeleton, "pack_character", posed_skin, posed_skeleton)
 
     multi_ik = _add_multi_ik(skeleton, "multi_ik", character)
-    joint_limits = input_node.geometry().attribValue(GlobalAttrib.JOINT_LIMITS)
     multi_ik_constraints = _add_multi_ik_constraints(
         skeleton,
         "multi_ik_constraints",
@@ -70,6 +73,51 @@ def _add_rig_doctor(
     return rd
 
 
+def _add_rig_pose(
+    parent: hou.OpNode,
+    name: str,
+    input_node: hou.SopNode,
+    joint_limits: dict[str, tuple[float, ...]],
+) -> hou.SopNode:
+    rp = parent.createNode("kinefx::rigpose", name)
+    rp.setInput(0, input_node)
+
+    min_flex = joint_limits["min_flex_angles"]
+    max_flex = joint_limits["max_flex_angles"]
+    min_yaw = joint_limits["min_yaw_angles"]
+    max_yaw = joint_limits["max_yaw_angles"]
+    leg_joints = list(LegJoint)
+
+    count = len(min_flex)
+    rp.parm("transformations").set(count)
+    for index in range(count):
+        joint_name = leg_joints[index].value
+        lo_flex, hi_flex = min_flex[index], max_flex[index]
+        lo_yaw, hi_yaw = min_yaw[index], max_yaw[index]
+        rx = 180.0 - 0.5 * (lo_flex + hi_flex)
+        ry = 0.5 * (lo_yaw + hi_yaw)
+
+        rp.parm(f"group{index}").set(f"@name=*_{joint_name}")
+        rp.parmTuple(f"r{index}").set((rx, ry, 0.0))
+
+    return rp
+
+
+def _add_skin_deform(
+    parent: hou.OpNode,
+    name: str,
+    skin: hou.SopNode,
+    rest_skeleton: hou.SopNode,
+    posed_skeleton: hou.SopNode,
+) -> hou.SopNode:
+    deform = parent.createNode("kinefx::jointdeform", name)
+    deform.setInput(0, skin)
+    deform.setInput(1, rest_skeleton)
+    deform.setInput(2, posed_skeleton)
+    deform.parm("deletecaptureattrib").set(0)
+    return deform
+
+
 def _add_pack_character(
     parent: hou.OpNode,
     name: str,
@@ -102,6 +150,7 @@ def _add_multi_ik(
 
     ik.parm("solver").set(1)
     ik.parm("segments").set("leg_*")
+    ik.parm("usetwist").set(0)
 
     return ik
 
@@ -139,14 +188,18 @@ def _add_multi_ik_constraints(
     count = len(joint_limit_specs)
     constraints.parm("limits").set(count)
     for index, (lo_flex, hi_flex, lo_yaw, hi_yaw) in enumerate(joint_limit_specs, 1):
+        mid_flex = 0.5 * (lo_flex + hi_flex)
+        mid_yaw = 0.5 * (lo_yaw + hi_yaw)
+
+        # Limits relative to the neutral rest orientation (rx = 180 - mid_flex, ry = mid_yaw)
         constraints.parmTuple(f"lower{index}").set((
-            math.radians(lo_flex - 180.0),
-            math.radians(lo_yaw),
+            math.radians(mid_flex - hi_flex),
+            math.radians(lo_yaw - mid_yaw),
             -math.pi,
         ))
         constraints.parmTuple(f"upper{index}").set((
-            math.radians(hi_flex - 180.0),
-            math.radians(hi_yaw),
+            math.radians(mid_flex - lo_flex),
+            math.radians(hi_yaw - mid_yaw),
             math.pi,
         ))
         constraints.parmTuple(f"restangle{index}").set((0.0, 0.0, 0.0))
