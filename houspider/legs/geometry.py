@@ -9,8 +9,8 @@ from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_posi
 
 from ..attributes import GlobalAttrib
 from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
-from ..helper import points_from_geo
-from ..segments.attributes import LegParam
+from ..helper import points_from_geo, set_point_id
+from ..segments.attributes import LegParam, legmembrane, legsegment
 from ..segments.build import build_leg
 
 
@@ -78,6 +78,7 @@ def extrude_legs(
             pt.setPosition(q.rotate(pt.position()) + origin)
 
         _adjust_coxa(node, pts, mid_pts, seg_pts[:16])
+        _attribute_leg_points(leg_idx, seg_pts, thickness_pts, mem_pts)
 
 
 def _get_leg_param(
@@ -161,6 +162,54 @@ def _adjust_coxa(
     geo.deletePoints(coxa_start_pts)
 
 
+def _attribute_leg_points(
+    leg_idx: int,
+    seg_pts: list[hou.Point],
+    thickness_pts: list[hou.Point],
+    mem_pts: list[hou.Point],
+) -> None:
+    """Assign ID attributes to all segment, thickness, and membrane points of a leg."""
+    # 1. Attribute segment points (7 segments)
+    # Loops: 2 (start), 3 (start_support), 4 (end_support), 5 (end).
+    # Coxa's start loop (loop 2) is deleted in _adjust_coxa because it connects to socket faces.
+    for seg_i in range(7):
+        seg_idx = seg_i + 1
+        base = seg_i * 16
+        loop_indices = [3, 4, 5] if seg_i == 0 else [2, 3, 4, 5]
+        for loop_idx in loop_indices:
+            loop_offset = loop_idx - 2
+            loop_pts = seg_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
+            for corner_offset, pt in enumerate(loop_pts):
+                corner_idx = corner_offset + 1
+                set_point_id(pt, legsegment(leg_idx, seg_idx, loop_idx, corner_idx))
+
+    # 2. Attribute thickness points (6 joints, 2 loops each of 4 points:
+    #    former segment end inset (loop 6) and latter segment start inset (loop 1))
+    for joint_i in range(6):
+        former_seg = joint_i + 1
+        latter_seg = joint_i + 2
+        base = joint_i * 8
+        former_inset = thickness_pts[base : base + 4]
+        latter_inset = thickness_pts[base + 4 : base + 8]
+        for corner_offset, pt in enumerate(former_inset):
+            corner_idx = corner_offset + 1
+            set_point_id(pt, legsegment(leg_idx, former_seg, 6, corner_idx))
+        for corner_offset, pt in enumerate(latter_inset):
+            corner_idx = corner_offset + 1
+            set_point_id(pt, legsegment(leg_idx, latter_seg, 1, corner_idx))
+
+    # 3. Attribute membrane points (6 joints, 3 loops each of 4 points:
+    #    loop 1: former support, loop 2: middle, loop 3: latter support)
+    for joint_i in range(6):
+        joint_idx = joint_i + 1
+        base = joint_i * 12
+        for loop_offset, loop_idx in enumerate([1, 2, 3]):
+            loop_pts = mem_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
+            for corner_offset, pt in enumerate(loop_pts):
+                corner_idx = corner_offset + 1
+                set_point_id(pt, legmembrane(leg_idx, joint_idx, loop_idx, corner_idx))
+
+
 def _get_adjusted_coxa_support_positions(
     socket_points: list[hou.Point],
     coxa_end_points: list[hou.Point],
@@ -168,14 +217,15 @@ def _get_adjusted_coxa_support_positions(
 ) -> tuple[hou.Vector3, hou.Vector3, hou.Vector3, hou.Vector3]:
     # su: socket upper, sb: socket bottom
     pos_su1, pos_su2, pos_sb1, pos_sb2 = points_to_positions(socket_points)
-    # pos_bu: base upper, pos_bb: base bottom
-    pos_bu2, pos_bu1, pos_bb2, pos_bb1 = points_to_positions(coxa_end_points)
+    # pos_bb: base bottom (lb, rb), pos_bu: base upper (ru, lu)
+    pos_bb1, pos_bb2, pos_bu2, pos_bu1 = points_to_positions(coxa_end_points)
 
     pos_ab1 = _get_adjusted_bottom_coxa_position(pos_sb1, pos_bb1, coxa_start_wedge_angle)
     pos_ab2 = _get_adjusted_bottom_coxa_position(pos_sb2, pos_bb2, coxa_start_wedge_angle)
     pos_au1 = (pos_su1 + pos_bu1) * 0.5
     pos_au2 = (pos_su2 + pos_bu2) * 0.5
-    return pos_au2, pos_au1, pos_ab2, pos_ab1
+    # Return ordered [lb, rb, ru, lu]
+    return pos_ab1, pos_ab2, pos_au2, pos_au1
 
 
 def _get_adjusted_bottom_coxa_position(
@@ -207,7 +257,7 @@ def _get_coxa_buffer_ratio(
     support_loop_ratio: float,
 ) -> float:
     pos_su1, pos_su2, _, _ = points_to_positions(socket_points)
-    pos_au2, pos_au1, _, _ = points_to_positions(support_points)
+    _, _, pos_au2, pos_au1 = points_to_positions(support_points)
     coxa_width = coxa_start_points[0].position().distanceTo(coxa_start_points[1].position())
     cut_length = coxa_width * support_loop_ratio
     pos_su_mid = (pos_su1 + pos_su2) * 0.5
@@ -226,7 +276,8 @@ def _build_coxa_socket_faces(
     su1, su2, sb1, sb2 = socket_points
     # s_mu, s_mb: socket midpoint upper / bottom
     s_mu, s_mb = socket_midpoints
-    eu2, eu1, eb2, eb1 = support_points
+    # eb: support bottom (lb, rb), eu: support upper (ru, lu)
+    eb1, eb2, eu2, eu1 = support_points
 
     # Upper pentagon: su1, s_mu, su2, eu2, eu1
     mid_u, _, b_eu2, b_eu1 = fill_pentagon_with_buffer(

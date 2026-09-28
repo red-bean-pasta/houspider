@@ -1,32 +1,12 @@
 import math
 
 import hou
-
 from houkit.models import Moject
 
-from ..helper import bridge_loops
-from .attributes import LegParam, Region
+from .attributes import LegParam
 
-def build_segment_tubes(
-    geo: hou.Geometry,
-    param: LegParam,
-) -> Moject[list[hou.Point]]:
-    segments, messages = _get_leg_points(param)
 
-    seg_pts: list[hou.Point] = []
-    for seg in segments:
-        cur_seg_pts = [geo.createPoint() for _ in range(8)]
-        for pt, pos in zip(cur_seg_pts, seg):
-            pt.setPosition(pos)
-        seg_pts.extend(cur_seg_pts)
-
-        start_loop = [cur_seg_pts[0], cur_seg_pts[1], cur_seg_pts[3], cur_seg_pts[2]]
-        end_loop = [cur_seg_pts[4], cur_seg_pts[5], cur_seg_pts[7], cur_seg_pts[6]]
-        bridge_loops(geo, start_loop, end_loop, primitive_attr=("region", Region.LEGSEGMENT))
-
-    return Moject(seg_pts, messages)
-
-def _get_leg_points(
+def get_cube_points(
     param: LegParam,
 ) -> Moject[list[list[hou.Vector3]]]:
     assert len(param.yaw_flex_specs) == len(param.length_ratios)
@@ -38,15 +18,19 @@ def _get_leg_points(
     btm_y = -coxa_height
     start_z = 0.0
     end_z = -coxa_length
+
+    # Loop corners ordered: 0: lb, 1: rb, 2: ru, 3: lu
     coxa = [
-        hou.Vector3(half_w, top_y, start_z),
-        hou.Vector3(-half_w, top_y, start_z),
-        hou.Vector3(half_w, btm_y, start_z),
-        hou.Vector3(-half_w, btm_y, start_z),
-        hou.Vector3(half_w, top_y, end_z),
-        hou.Vector3(-half_w, top_y, end_z),
-        hou.Vector3(half_w, btm_y, end_z),
-        hou.Vector3(-half_w, btm_y, end_z),
+        # Start loop (Z = start_z)
+        hou.Vector3(-half_w, btm_y, start_z),  # lb (corner 1)
+        hou.Vector3(half_w, btm_y, start_z),   # rb (corner 2)
+        hou.Vector3(half_w, top_y, start_z),   # ru (corner 3)
+        hou.Vector3(-half_w, top_y, start_z),  # lu (corner 4)
+        # End loop (Z = end_z)
+        hou.Vector3(-half_w, btm_y, end_z),    # lb (corner 1)
+        hou.Vector3(half_w, btm_y, end_z),     # rb (corner 2)
+        hou.Vector3(half_w, top_y, end_z),     # ru (corner 3)
+        hou.Vector3(-half_w, top_y, end_z),    # lu (corner 4)
     ]
 
     messages: list[str] = []
@@ -79,6 +63,7 @@ def _get_leg_points(
     assert len(segments) == len(param.yaw_flex_specs) + 1
     return Moject(segments, messages)
 
+
 def _append_segment(
     former_positions: list[hou.Vector3],
     height_ratio: float,
@@ -92,20 +77,20 @@ def _append_segment(
     assert len(former_positions) == 8, f"Expected 8 positions for former segment, got {len(former_positions)}"
 
     # former_positions are ordered:
-    # 0: start top +X, 1: start top -X, 2: start btm +X, 3: start btm -X
-    # 4: end top +X,   5: end top -X,   6: end btm +X,   7: end btm -X
-    start_top1 = former_positions[0]
-    # start_topn1 = former_positions[1]
-    start_btm1 = former_positions[2]
-    start_btmn1 = former_positions[3]
-    end_top1 = former_positions[4]
-    end_topn1 = former_positions[5]
-    end_btm1 = former_positions[6]
-    end_btmn1 = former_positions[7]
+    # 0: start lb, 1: start rb, 2: start ru, 3: start lu
+    # 4: end lb,   5: end rb,   6: end ru,   7: end lu
+    start_btm_lb = former_positions[0]
+    start_btm_rb = former_positions[1]
+    start_top_ru = former_positions[2]
+    start_top_lu = former_positions[3]
+    end_btm_lb = former_positions[4]
+    end_btm_rb = former_positions[5]
+    end_top_ru = former_positions[6]
+    end_top_lu = former_positions[7]
 
-    former_width = end_top1.x() - end_topn1.x()
-    former_height = end_top1.y() - end_btm1.y()
-    former_length = start_top1.z() - end_top1.z()
+    former_width = end_top_ru.x() - end_top_lu.x()
+    former_height = end_top_ru.y() - end_btm_rb.y()
+    former_length = start_top_ru.z() - end_top_ru.z()
     former_size = (former_width, former_height)
 
     in_shrink, between_shrink = section_shrink_ratios
@@ -126,7 +111,7 @@ def _append_segment(
     )
 
     latter_segment = _build_latter_segment_positions(
-        end_top1,
+        end_top_ru,
         offset,
         (latter_start_width, latter_start_height),
         (latter_end_width, latter_end_height),
@@ -136,10 +121,10 @@ def _append_segment(
     )
     former_positions_list = _apply_former_segment_wedge(
         former_positions,
-        start_btm1,
-        start_btmn1,
-        end_btm1,
-        end_btmn1,
+        start_btm_lb,
+        start_btm_rb,
+        end_btm_lb,
+        end_btm_rb,
         former_height,
         wedge_angle,
     )
@@ -148,7 +133,7 @@ def _append_segment(
 
 
 def _build_latter_segment_positions(
-    former_end_top: hou.Vector3,
+    former_end_top_ru: hou.Vector3,
     offset: hou.Vector2,
     start_size: tuple[float, float],
     end_size: tuple[float, float],
@@ -159,9 +144,9 @@ def _build_latter_segment_positions(
     start_width, start_height = start_size
     end_width, end_height = end_size
 
-    start_top_y = former_end_top.y() + offset.y()
+    start_top_y = former_end_top_ru.y() + offset.y()
     start_btm_y = start_top_y - start_height
-    start_z = former_end_top.z() - offset.x()
+    start_z = former_end_top_ru.z() - offset.x()
     end_z = start_z - length
     start_hw = start_width / 2.0
     end_hw = end_width / 2.0
@@ -170,34 +155,35 @@ def _build_latter_segment_positions(
     end_top_y = start_top_y - (start_height - end_height) * spine_ratio
     end_btm_y = end_top_y - end_height
 
+    # Loop corners ordered: 0: lb, 1: rb, 2: ru, 3: lu
     return [
-        hou.Vector3(start_hw, start_top_y, start_z),
-        hou.Vector3(-start_hw, start_top_y, start_z),
-        hou.Vector3(start_hw, start_btm_y, start_btm_z),
-        hou.Vector3(-start_hw, start_btm_y, start_btm_z),
-        hou.Vector3(end_hw, end_top_y, end_z),
-        hou.Vector3(-end_hw, end_top_y, end_z),
-        hou.Vector3(end_hw, end_btm_y, end_z),
-        hou.Vector3(-end_hw, end_btm_y, end_z),
+        hou.Vector3(-start_hw, start_btm_y, start_btm_z),  # lb (corner 1)
+        hou.Vector3(start_hw, start_btm_y, start_btm_z),   # rb (corner 2)
+        hou.Vector3(start_hw, start_top_y, start_z),       # ru (corner 3)
+        hou.Vector3(-start_hw, start_top_y, start_z),      # lu (corner 4)
+        hou.Vector3(-end_hw, end_btm_y, end_z),            # lb (corner 1)
+        hou.Vector3(end_hw, end_btm_y, end_z),             # rb (corner 2)
+        hou.Vector3(end_hw, end_top_y, end_z),             # ru (corner 3)
+        hou.Vector3(-end_hw, end_top_y, end_z),            # lu (corner 4)
     ]
 
 
 def _apply_former_segment_wedge(
     former_positions: list[hou.Vector3],
-    start_btm1: hou.Vector3,
-    start_btmn1: hou.Vector3,
-    end_btm1: hou.Vector3,
-    end_btmn1: hou.Vector3,
+    start_btm_lb: hou.Vector3,
+    start_btm_rb: hou.Vector3,
+    end_btm_lb: hou.Vector3,
+    end_btm_rb: hou.Vector3,
     former_height: float,
     wedge_angle: float,
 ) -> list[hou.Vector3]:
     delta_z = former_height * math.tan(math.radians(wedge_angle))
-    new_end_btm1_z = min(end_btm1.z() + delta_z, start_btm1.z())
-    new_end_btmn1_z = min(end_btmn1.z() + delta_z, start_btmn1.z())
+    new_end_btm_lb_z = min(end_btm_lb.z() + delta_z, start_btm_lb.z())
+    new_end_btm_rb_z = min(end_btm_rb.z() + delta_z, start_btm_rb.z())
 
     former_positions_list = list(former_positions)
-    former_positions_list[6] = hou.Vector3(end_btm1.x(), end_btm1.y(), new_end_btm1_z)
-    former_positions_list[7] = hou.Vector3(end_btmn1.x(), end_btmn1.y(), new_end_btmn1_z)
+    former_positions_list[4] = hou.Vector3(end_btm_lb.x(), end_btm_lb.y(), new_end_btm_lb_z)
+    former_positions_list[5] = hou.Vector3(end_btm_rb.x(), end_btm_rb.y(), new_end_btm_rb_z)
     return former_positions_list
 
 
@@ -221,6 +207,7 @@ def _calc_segment_offset_and_wedge(
     offset_x = max(offset_x, minimum_membrane[0])
 
     return Moject((hou.Vector2(offset_x, offset_y), wedge_angle), messages)
+
 
 def _calc_membrane_spec(
     max_yaw_deg: float,
@@ -307,6 +294,7 @@ def _apply_membrane_spec_limits(
     distance = max(distance, min_distance)
     return distance, angle, messages
 
+
 def _solve_membrane_wedge_deg(
     min_flex: float,
     membrane_thickness: float,
@@ -323,6 +311,7 @@ def _solve_membrane_wedge_deg(
     )
     return Moject(math.degrees(wedge_rad), messages)
 
+
 def _solve_membrane_wedge_rad(
     min_flex: float,
     membrane_thickness: float,
@@ -338,6 +327,7 @@ def _solve_membrane_wedge_rad(
         iterations,
     )
     return Moject(math.pi / 2 - remain_rad, messages)
+
 
 def _solve_membrane_wedge_remain_rad(
     min_flex: float,
@@ -379,6 +369,7 @@ def _solve_membrane_wedge_remain_rad(
     )
     return Moject(u, [msg])
 
+
 def _solve_membrane_thickness_deg(
     needed_angle: float,
     min_height: float,
@@ -389,6 +380,7 @@ def _solve_membrane_thickness_deg(
         min_height,
         math.radians(wedge_angle),
     )
+
 
 def _solve_membrane_thickness_rad(
     needed_angle: float,
