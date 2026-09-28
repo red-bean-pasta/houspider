@@ -3,7 +3,7 @@ import math
 import hou
 from houkit.models import Moject
 
-from .attributes import LegParam
+from .models import LegParam
 
 
 def get_cube_points(

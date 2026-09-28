@@ -3,7 +3,7 @@ import hou
 from houkit.attributer import points_start_with
 
 from ..bases import attributes as base_attributes
-from ..segments.attributes import Region
+from .attributes import Region
 
 
 def extract_right_leg_points(node: hou.SopNode) -> None:

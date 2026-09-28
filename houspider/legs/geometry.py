@@ -10,8 +10,9 @@ from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_posi
 from ..attributes import GlobalAttrib
 from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
 from ..helper import points_from_geo, set_point_id
-from ..segments.attributes import LegParam, legmembrane, legsegment
+from ..segments.models import LegParam
 from ..segments.build import build_leg
+from .attributes import legmembrane, legsegment
 
 
 def record_global_info(

@@ -9,9 +9,9 @@ from houkit.topology import fill_face
 
 from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
 from ..helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
-from ..segments.attributes import LegParam, Region
+from ..segments.models import LegParam
 from ..segments.build import build_leg
-from .attributes import tmp_coxa_corner, tmp_coxa_end, tmp_coxa_start, tmp_coxa_support
+from .attributes import Region, pedipalpcoxabuffer, pedipalpmembrane, pedipalpsegment
 
 
 def remove_noise_points(
@@ -44,9 +44,11 @@ def trim_bottom_side_length(
     trim_length = hou.Vector3(v.x(), 0.0, v.z()).length()
 
     pedipalp_pts = _get_pedipalp_points(geo)
+    prefix_start = pedipalpcoxabuffer(1, "start")
+    prefix_support = pedipalpcoxabuffer(1, "support")
     for pt in pedipalp_pts:
         pid = pt.stringAttribValue("id")
-        if pid.startswith(tmp_coxa_start()) or pid.startswith(tmp_coxa_support(1)):
+        if pid.startswith(prefix_start) or pid.startswith(prefix_support):
             continue
         pos = pt.position()
         pt.setPosition(hou.Vector3(pos.x(), pos.y(), pos.z() + trim_length))
@@ -59,7 +61,7 @@ def position_basic(
     pedipalp_pts = _get_pedipalp_points(geo)
     top_right_pt, m1, m3, m4 = points_from_geo(
         geo,
-        tmp_coxa_start(3),
+        pedipalpcoxabuffer(1, "start", 3),
         basemaxillamembrane(1),
         basemaxillamembrane(3),
         basemaxillamembrane(4),
@@ -78,14 +80,14 @@ def delete_start_coxa_supports(
     node: hou.SopNode,
 ) -> None:
     geo: hou.Geometry = node.geometry()
-    pts = [p for p in geo.points() if p.stringAttribValue("id").startswith(tmp_coxa_support(1))]
+    pts = points_start_with(geo, "id", pedipalpcoxabuffer(1, "support"))
     geo.deletePoints(list(pts))
 
     starts = points_from_geo(
         geo,
-        tmp_coxa_start(1),
-        tmp_coxa_start(2),
-        tmp_coxa_start(4),
+        pedipalpcoxabuffer(1, "start", 1),
+        pedipalpcoxabuffer(1, "start", 2),
+        pedipalpcoxabuffer(1, "start", 4),
     )
     geo.deletePoints(list(starts))
 
@@ -102,31 +104,28 @@ def _add_bottom_right_face_point(
     geo: hou.Geometry,
     endite_buffer: hou.Vector2,
 ) -> hou.Point:
-    e1, e4, m1 = points_from_geo(
+    e1, e2, m1 = points_from_geo(
         geo,
-        tmp_coxa_end(1),
-        tmp_coxa_end(4),
+        pedipalpsegment(1, 1, 5, 1),
+        pedipalpsegment(1, 1, 5, 2),
         basemaxillamembrane(1),
     )
 
     direction = get_coxa_base_direction(geo)
 
-    start_position = e1.position() * endite_buffer.x() + e4.position() * (1.0 - endite_buffer.x())
+    start_position = e1.position() * endite_buffer.x() + e2.position() * (1.0 - endite_buffer.x())
     dist = get_buffer_dist_z(geo, endite_buffer.y())
     target_position = start_position + direction * dist
-    p = add_id_point(geo, target_position, tmp_coxa_corner("bottom"))
+    p = add_id_point(geo, target_position, pedipalpcoxabuffer(1, "bottom"))
     return p
 
 
 def cleanup(node: hou.SopNode) -> None:
     geo: hou.Geometry = node.geometry()
 
-    pts = points_start_with(geo, "id", "tmp_")
-    for p in pts:
-        set_point_id(p, "")
     for prim in geo.prims():
         if not prim.stringAttribValue("region"):
-            prim.setAttribValue("region", Region.LEGSEGMENT)
+            prim.setAttribValue("region", Region.PEDIPALPSEGMENT)
 
     remove_unused_points(geo)
 
@@ -137,26 +136,87 @@ def _build_segments(
     geo = node.geometry()
     param = _get_pedipalp_param(node)
     result = build_leg(geo, param)
-    (all_seg_pts, _, _), _ = result
+    (all_seg_pts, thickness_pts, all_mem_pts), _ = result
 
-    def _get_ordered_loop(index: int) -> tuple[hou.Point, ...]:
-        return all_seg_pts[index * 4 + 3], all_seg_pts[index * 4 + 1], all_seg_pts[index * 4 + 0], all_seg_pts[index * 4 + 2]
+    for prim in geo.prims():
+        r = prim.stringAttribValue("region")
+        if r == "legsegment":
+            prim.setAttribValue("region", Region.PEDIPALPSEGMENT)
+        elif r == "legmembrane":
+            prim.setAttribValue("region", Region.PEDIPALPMEMBRANE)
 
-    # 1: Bottom left, 2: Top left, 3: Top right, 4: Bottom right
-    start_corners = _get_ordered_loop(0)
-    end_corners = _get_ordered_loop(3)
-    start_support_corners = _get_ordered_loop(1)
-    end_support_corners = _get_ordered_loop(2)
-    for i, (s_pt, e_pt, ss_pt, es_pt) in enumerate(
-        zip(start_corners, end_corners, start_support_corners, end_support_corners),
-        start=1
-    ):
-        set_point_id(s_pt, tmp_coxa_start(i))
-        set_point_id(e_pt, tmp_coxa_end(i))
-        set_point_id(ss_pt, tmp_coxa_support(1, i))
-        set_point_id(es_pt, tmp_coxa_support(2, i))
+    _attribute_pedipalp_points(1, all_seg_pts, thickness_pts, all_mem_pts)
 
     return result
+
+
+def _attribute_pedipalp_points(
+    side: int,
+    seg_pts: list[hou.Point],
+    thickness_pts: list[hou.Point],
+    mem_pts: list[hou.Point],
+) -> None:
+    """Assign ID attributes to all segment, thickness, and membrane points of a pedipalp."""
+    # 1. Coxa (seg 1)
+    # Loop 0: start loop (to be pruned to start 3)
+    for corner_offset, pt in enumerate(seg_pts[0:4]):
+        corner_idx = corner_offset + 1
+        set_point_id(pt, pedipalpcoxabuffer(side, "start", corner_idx))
+
+    # Loop 1: start support loop (to be deleted in delete_start_coxa_supports)
+    for corner_offset, pt in enumerate(seg_pts[4:8]):
+        corner_idx = corner_offset + 1
+        set_point_id(pt, pedipalpcoxabuffer(side, "support", corner_idx))
+
+    # Loop 2: end support loop (loop 4)
+    for corner_offset, pt in enumerate(seg_pts[8:12]):
+        corner_idx = corner_offset + 1
+        set_point_id(pt, pedipalpsegment(side, 1, 4, corner_idx))
+
+    # Loop 3: end loop (loop 5)
+    for corner_offset, pt in enumerate(seg_pts[12:16]):
+        corner_idx = corner_offset + 1
+        set_point_id(pt, pedipalpsegment(side, 1, 5, corner_idx))
+
+    # 2. Other segments (seg 2..6: trochanter, femur, patella, tibia, tarsus)
+    # Loops: 2 (start), 3 (start_support), 4 (end_support), 5 (end)
+    num_segs = len(seg_pts) // 16
+    for seg_i in range(1, num_segs):
+        seg_idx = seg_i + 1
+        base = seg_i * 16
+        for loop_offset, loop_idx in enumerate([2, 3, 4, 5]):
+            loop_pts = seg_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
+            for corner_offset, pt in enumerate(loop_pts):
+                corner_idx = corner_offset + 1
+                set_point_id(pt, pedipalpsegment(side, seg_idx, loop_idx, corner_idx))
+
+    # 3. Thickness points (5 joints: 1..5)
+    # Former segment end inset (loop 6) and latter segment start inset (loop 1)
+    num_joints = len(thickness_pts) // 8
+    for joint_i in range(num_joints):
+        former_seg = joint_i + 1
+        latter_seg = joint_i + 2
+        base = joint_i * 8
+        former_inset = thickness_pts[base : base + 4]
+        latter_inset = thickness_pts[base + 4 : base + 8]
+        for corner_offset, pt in enumerate(former_inset):
+            corner_idx = corner_offset + 1
+            set_point_id(pt, pedipalpsegment(side, former_seg, 6, corner_idx))
+        for corner_offset, pt in enumerate(latter_inset):
+            corner_idx = corner_offset + 1
+            set_point_id(pt, pedipalpsegment(side, latter_seg, 1, corner_idx))
+
+    # 4. Membrane points (5 joints: 1..5)
+    # Loop 1: former support, loop 2: middle, loop 3: latter support
+    for joint_i in range(num_joints):
+        joint_idx = joint_i + 1
+        base = joint_i * 12
+        for loop_offset, loop_idx in enumerate([1, 2, 3]):
+            loop_pts = mem_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
+            for corner_offset, pt in enumerate(loop_pts):
+                corner_idx = corner_offset + 1
+                set_point_id(pt, pedipalpmembrane(side, joint_idx, loop_idx, corner_idx))
+
 
 def _get_pedipalp_param(
     node: hou.SopNode,
@@ -211,7 +271,16 @@ def _get_pedipalp_coxa_width_length(
 def _get_pedipalp_points(
     geo: hou.Geometry,
 ) -> list[hou.Point]:
-    pts = {pt for prim in prims_by_attr(geo, "region", (Region.LEGMEMBRANE, Region.LEGSEGMENT), startswith=True) for pt in prim.points()}
+    pts = {
+        pt
+        for prim in prims_by_attr(
+            geo,
+            "region",
+            (Region.PEDIPALPMEMBRANE, Region.PEDIPALPSEGMENT),
+            startswith=True,
+        )
+        for pt in prim.points()
+    }
     if not pts:
         return list(geo.points())
     return list(pts)
@@ -241,10 +310,10 @@ def _add_base_trapezoid(
         geo,
         basemaxillamembrane(1),
         basemaxillamembrane(2),
-        tmp_coxa_corner("bottom"),
-        tmp_coxa_support(2, 4),
-        tmp_coxa_end(1),
-        tmp_coxa_end(4),
+        pedipalpcoxabuffer(1, "bottom"),
+        pedipalpsegment(1, 1, 4, 2),
+        pedipalpsegment(1, 1, 5, 1),
+        pedipalpsegment(1, 1, 5, 2),
     )
 
     pos_mid_bottom = (e1.position() + e4.position()) * 0.5
@@ -258,8 +327,8 @@ def _add_base_trapezoid(
         pos_mid_bottom,
     )
 
-    p3 = add_id_point(geo, pos_p3, tmp_coxa_corner("base", 1))
-    p4 = add_id_point(geo, pos_p4, tmp_coxa_corner("base", 2))
+    p3 = add_id_point(geo, pos_p3, pedipalpcoxabuffer(1, "base", 1))
+    p4 = add_id_point(geo, pos_p4, pedipalpcoxabuffer(1, "base", 2))
 
     fill_face([m1, m2, p3, p4], reverse_order=True)
 
@@ -318,8 +387,8 @@ def _calculate_base_trapezoid_points(
 def get_coxa_base_direction(geo: hou.Geometry) -> hou.Vector3:
     es3, e3 = points_from_geo(
         geo,
-        tmp_coxa_support(2, 3),
-        tmp_coxa_end(3),
+        pedipalpsegment(1, 1, 4, 3),
+        pedipalpsegment(1, 1, 5, 3),
     )
     return (es3.position() - e3.position()).normalized()
 
@@ -327,7 +396,7 @@ def get_coxa_base_direction(geo: hou.Geometry) -> hou.Vector3:
 def get_buffer_dist_z(geo: hou.Geometry, endite_buffer_y: float) -> float:
     e1, m1 = positions_from_geo(
         geo,
-        tmp_coxa_end(1),
+        pedipalpsegment(1, 1, 5, 1),
         basemaxillamembrane(1),
     )
     return e1.distanceTo(m1) * endite_buffer_y
