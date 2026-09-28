@@ -1,20 +1,11 @@
-from collections.abc import Collection
-
 import hou
 from houkit.attributer import points_start_with
 
-from .selector import (
-    get_pedipalp_socket_points,
-    get_coxa_socket_points,
-    get_local_z_value,
-    get_local_z_direction,
-    traverse_limb_prims,
-    group_membrane_rings,
-)
 from ..abdomens.attributes import abdomenend
-from ..bases.attributes import basecoxamemebrane
-from ..helper import positions_from_geo
-from ..segments.attributes import Region
+from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
+from ..helper import points_from_geo, positions_from_geo
+from ..legs.attributes import legsegment
+from ..pedipalps.attributes import pedipalpsegment
 from ..spiders.attributes import ID as PEDICEL_IDS
 
 
@@ -30,18 +21,63 @@ def get_leg_bone_positions(
     is_right: bool,
     leg_index: int,
 ) -> list[hou.Vector3]:
-    socket_pts = get_coxa_socket_points(geo, is_right, leg_index)
-    assert len(socket_pts) == 4, f"Expected 4 socket points for leg {'R' if is_right else 'L'}{leg_index}, got {len(socket_pts)}"
-    return _extract_limb_bone_positions(socket_pts)
+    affix_idx = leg_index if is_right else -leg_index
+
+    # 1. Socket hinge: midpoint of top corners (ru, lu) of coxa socket
+    s3, s4 = points_from_geo(geo, basecoxamemebrane(affix_idx, 3), basecoxamemebrane(affix_idx, 4))
+    socket_hinge = (s3.position() + s4.position()) * 0.5
+
+    # 2. Joint hinges 1..6: midpoint of top corners (ru, lu) of former segment end inset (loop 6)
+    joint_hinges = [
+        _midpoint_from_ids(
+            geo,
+            legsegment(affix_idx, k, 6, 3),
+            legsegment(affix_idx, k, 6, 4),
+        )
+        for k in range(1, 7)
+    ]
+
+    # 3. Tip hinge: midpoint of top corners (ru, lu) of tarsus end (seg 7, loop 5)
+    tip_hinge = _midpoint_from_ids(
+        geo,
+        legsegment(affix_idx, 7, 5, 3),
+        legsegment(affix_idx, 7, 5, 4),
+    )
+
+    return [socket_hinge, *joint_hinges, tip_hinge]
 
 
 def get_pedipalp_bone_positions(
     geo: hou.Geometry,
     is_right: bool,
 ) -> list[hou.Vector3]:
-    socket_pts = get_pedipalp_socket_points(geo, is_right)
+    side = 1 if is_right else -1
+
+    # 1. Socket hinge: midpoint of the two highest socket points
+    left_pts = points_start_with(geo, "id", basemaxillamembrane("-"))
+    socket_pts = [p for p in points_start_with(geo, "id", basemaxillamembrane()) if p not in left_pts] if is_right else left_pts
     assert len(socket_pts) == 4, f"Expected 4 socket points for pedipalp {'R' if is_right else 'L'}, got {len(socket_pts)}"
-    return _extract_limb_bone_positions(socket_pts)
+    sorted_by_y = sorted(socket_pts, key=lambda p: p.position().y())
+    socket_hinge = (sorted_by_y[2].position() + sorted_by_y[3].position()) * 0.5
+
+    # 2. Joint hinges 1..5: midpoint of top corners (ru, lu) of former segment end inset (loop 6)
+    joint_hinges = [
+        _midpoint_from_ids(
+            geo,
+            pedipalpsegment(side, k, 6, 3),
+            pedipalpsegment(side, k, 6, 4),
+        )
+        for k in range(1, 6)
+    ]
+
+    # 3. Tip hinge: midpoint of top corners (ru, lu) of tarsus end (seg 6, loop 5)
+    tip_hinge = _midpoint_from_ids(
+        geo,
+        pedipalpsegment(side, 6, 5, 3),
+        pedipalpsegment(side, 6, 5, 4),
+    )
+
+    return [socket_hinge, *joint_hinges, tip_hinge]
 
 
 def get_root_position(geo: hou.Geometry) -> hou.Vector3:
@@ -51,54 +87,13 @@ def get_root_position(geo: hou.Geometry) -> hou.Vector3:
     return hou.Vector3(0.0, avg.y(), avg.z())
 
 
-def _extract_limb_bone_positions(
-    socket_pts: list[hou.Point],
-) -> list[hou.Vector3]:
-    socket_hinge = _calculate_hinge_position(socket_pts)
-
-    prims, pts = traverse_limb_prims(socket_pts)
-    membranes = group_membrane_rings(prims)
-
-    first_membrane = membranes[0]
-    direction = get_local_z_direction(first_membrane[1])
-
-    membrane_hinges = [
-        _calculate_hinge_position(_get_former_segment_end_points(group[1], direction))
-        for group in membranes
-    ]
-    tip_pos = _find_tip_position(pts, direction)
-
-    return [socket_hinge, *membrane_hinges, tip_pos]
-
-
-def _get_former_segment_end_points(
-    membrane_points: Collection[hou.Point],
-    direction: hou.Vector3,
-) -> list[hou.Point]:
-    boundaries = [
-        p
-        for p in membrane_points
-        if any(pr.stringAttribValue("region") == Region.LEGSEGMENT for pr in p.prims())
-    ]
-    assert len(boundaries) == 8, f"Expected 8 boundary points on membrane ring, got {len(boundaries)}"
-    return sorted(boundaries, key=lambda p: get_local_z_value(p, direction))[:4]
-
-
-def _find_tip_position(
-    limb_points: set[hou.Point],
-    direction: hou.Vector3,
+def _midpoint_from_ids(
+    geo: hou.Geometry,
+    id_a: str,
+    id_b: str,
 ) -> hou.Vector3:
-    furthest_points = sorted(limb_points, key=lambda p: get_local_z_value(p, direction))[-4:]
-    return _calculate_hinge_position(furthest_points)
-
-
-def _calculate_hinge_position(
-    points: Collection[hou.Point],
-) -> hou.Vector3:
-    assert len(points) == 4, f"Expected 4 points for cross-section hinge calculation, got {len(points)}"
-    sorted_by_y = sorted(points, key=lambda p: p.position().y())
-    top1, top2 = sorted_by_y[2], sorted_by_y[3]
-    return (top1.position() + top2.position()) * 0.5
+    p_a, p_b = points_from_geo(geo, id_a, id_b)
+    return (p_a.position() + p_b.position()) * 0.5
 
 
 def _get_averaged_position(

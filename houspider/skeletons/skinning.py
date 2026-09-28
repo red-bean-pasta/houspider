@@ -1,10 +1,12 @@
-from typing import Collection
+from collections.abc import Callable
 
 import hou
 from hou import OpNode, SopNode
 from houkit.noder import sopify
 
-from ..segments.attributes import Region
+from ..bases.attributes import Region as BaseRegion
+from ..legs.attributes import ID as LegID, Region as LegRegion, legmembrane, legsegment
+from ..pedipalps.attributes import ID as PedipalpID, Region as PedipalpRegion, pedipalpmembrane, pedipalpsegment
 from .attributes import (
     BodyJoint,
     LegJoint,
@@ -12,15 +14,6 @@ from .attributes import (
     body_joint_name,
     leg_joint_name,
     pedipalp_joint_name,
-)
-from .selector import (
-    get_coxa_socket_points,
-    get_local_z_direction,
-    get_local_z_value,
-    get_membrane_boundaries,
-    get_pedipalp_socket_points,
-    group_membrane_rings,
-    traverse_limb_prims,
 )
 
 
@@ -69,6 +62,10 @@ def _skin_body(
 
     pedicel_pts: list[hou.Point] = []
     for p in geo.points():
+        pid = p.attribValue("id")
+        if pid.startswith("leg") or pid.startswith("pedipalp"):
+            continue
+
         regions = {pr.stringAttribValue("region") for pr in p.prims()}
         if any(r == "abdomen" for r in regions):
             weights[p.number()] = [(pedicel_idx, 1.0)]
@@ -99,10 +96,21 @@ def _skin_legs(
 ) -> None:
     joints = list(LegJoint)
     for is_right in (True, False):
-        for i in range(1, 5):
-            socket_pts = get_coxa_socket_points(geo, is_right, i)
-            bone_names = [leg_joint_name(is_right, i, j) for j in joints]
-            _skin_limb(socket_pts, bone_names, bone_indexes, weights)
+        for leg_idx in range(1, 5):
+            affix_idx = leg_idx if is_right else -leg_idx
+            bone_names = [leg_joint_name(is_right, leg_idx, j) for j in joints]
+            joint_indices = [bone_indexes[name] for name in bone_names]
+
+            _skin_limb_attributes(
+                geo=geo,
+                side_idx=affix_idx,
+                num_segments=7,
+                joint_indices=joint_indices,
+                weights=weights,
+                segment_id_fn=lambda seg, loop, corner, s=affix_idx: legsegment(s, seg, loop, corner),
+                membrane_id_fn=lambda jnt, loop, corner, s=affix_idx: legmembrane(s, jnt, loop, corner),
+                buffer_prefix=f"{LegID.LEGSEGMENT}{affix_idx}_1_buffer",
+            )
 
 
 def _skin_pedipalps(
@@ -112,101 +120,101 @@ def _skin_pedipalps(
 ) -> None:
     joints = list(PedipalpJoint)
     for is_right in (True, False):
-        socket_pts = get_pedipalp_socket_points(geo, is_right)
+        side = 1 if is_right else -1
         bone_names = [pedipalp_joint_name(is_right, j) for j in joints]
-        _skin_limb(socket_pts, bone_names, bone_index_map, weights)
+        joint_indices = [bone_index_map[name] for name in bone_names]
 
-
-def _skin_limb(
-    socket_points: list[hou.Point],
-    bones: list[str],
-    bone_index_map: dict[str, int],
-    weights: dict[int, list[tuple[int, float]]],
-) -> None:
-    joint_indices = [bone_index_map[name] for name in bones]
-    prims, _ = traverse_limb_prims(socket_points)
-    membranes = group_membrane_rings(prims)
-    assert len(membranes) == len(bones) - 2, f"Expected {len(bones) - 2} membranes, got {len(membranes)}"
-
-    boundaries: list[list[hou.Point]] = []
-    for _, m_pts in membranes:
-        b1, b2 = get_membrane_boundaries(m_pts)
-        boundaries.extend([b1, b2])
-
-    segments = _collect_segment_points(boundaries)
-    assert len(segments) == len(bones) - 1, f"Expected {len(bones) - 1} segments, got {len(segments)}"
-
-    for s_idx, seg_pts in enumerate(segments):
-        joint_idx = joint_indices[s_idx]
-        for p in seg_pts:
-            weights[p.number()] = [(joint_idx, 1.0)]
-
-    for m_idx, (_, m_pts) in enumerate(membranes):
-        _skin_membrane(
-            m_pts,
-            (joint_indices[m_idx], joint_indices[m_idx + 1]),
-            weights,
+        _skin_limb_attributes(
+            geo=geo,
+            side_idx=side,
+            num_segments=6,
+            joint_indices=joint_indices,
+            weights=weights,
+            segment_id_fn=lambda seg, loop, corner, s=side: pedipalpsegment(s, seg, loop, corner),
+            membrane_id_fn=lambda jnt, loop, corner, s=side: pedipalpmembrane(s, jnt, loop, corner),
+            buffer_prefix=f"{PedipalpID.PEDIPALPSEGMENT}{side}_1_buffer",
         )
 
 
-def _collect_segment_points(
-    boundaries: list[list[hou.Point]],
-) -> list[set[hou.Point]]:
-    segments: list[set[hou.Point]] = []
-
-    segments.append(_grow_segment(boundaries[0]))
-
-    num_intermediate = (len(boundaries) - 2) // 2
-    for i in range(1, num_intermediate + 1):
-        start_b = boundaries[2 * i - 1]
-        stop_b = set(boundaries[2 * i])
-        segments.append(_grow_segment(start_b, stop_b))
-
-    segments.append(_grow_segment(boundaries[-1]))
-    return segments
-
-
-def _grow_segment(
-    seeds: Collection[hou.Point],
-    stop_points: set[hou.Point] | None = None,
-) -> set[hou.Point]:
-    visited: set[hou.Point] = set(seeds)
-    queue: list[hou.Point] = list(seeds)
-
-    while queue:
-        pt = queue.pop(0)
-        for prim in pt.prims():
-            if prim.stringAttribValue("region") == Region.LEGSEGMENT:
-                for p in prim.points():
-                    if p not in visited:
-                        visited.add(p)
-                        if stop_points is None or p not in stop_points:
-                            queue.append(p)
-    return visited
-
-
-def _skin_membrane(
-    points: Collection[hou.Point],
-    joints: tuple[int, int],
+def _skin_limb_attributes(
+    geo: hou.Geometry,
+    side_idx: int,
+    num_segments: int,
+    joint_indices: list[int],
     weights: dict[int, list[tuple[int, float]]],
+    segment_id_fn: Callable[[int | str, int | str, int | str], str],
+    membrane_id_fn: Callable[[int | str, int | str, int | str], str],
+    buffer_prefix: str,
 ) -> None:
-    direction = get_local_z_direction(points)
-    boundary1, boundary2 = get_membrane_boundaries(points)
-    z1 = sum(get_local_z_value(p, direction) for p in boundary1) / len(boundary1)
-    z2 = sum(get_local_z_value(p, direction) for p in boundary2) / len(boundary2)
-    z_span = z2 - z1
-    assert z_span > 1e-6
+    """Skin all segments and membranes of a limb using direct attribute references."""
+    id_to_point: dict[str, hou.Point] = {}
+    for p in geo.points():
+        pid = p.attribValue("id")
+        if pid:
+            id_to_point[pid] = p
 
-    j_former, j_latter = joints
-    soft_pts = set(points) - set(boundary1) - set(boundary2)
-    for p in soft_pts:
-        z = get_local_z_value(p, direction)
-        t = (z - z1) / z_span
-        t = max(0.0, min(1.0, t))
-        weights[p.number()] = [
-            (j_former, round(1.0 - t, 4)),
-            (j_latter, round(t, 4)),
-        ]
+    # 1. Skin coxa socket buffer points 100% to coxa bone (joint_indices[0])
+    coxa_bone = joint_indices[0]
+    for pid, pt in id_to_point.items():
+        if pid.startswith(buffer_prefix):
+            weights[pt.number()] = [(coxa_bone, 1.0)]
+
+    # 2. Skin segments (1..num_segments): 100% to each segment's bone
+    for seg_idx in range(1, num_segments + 1):
+        seg_bone = joint_indices[seg_idx - 1]
+        loops = [2, 3, 4, 5]
+        if seg_idx > 1:
+            loops.append(1)  # start inset
+        if seg_idx < num_segments:
+            loops.append(6)  # end inset
+
+        for loop_idx in loops:
+            for corner_idx in range(1, 5):
+                pid = segment_id_fn(seg_idx, loop_idx, corner_idx)
+                if pid in id_to_point:
+                    weights[id_to_point[pid].number()] = [(seg_bone, 1.0)]
+
+    # 3. Skin membranes (1..num_joints):
+    # Upper corners (3: ru, 4: lu) are 100% skinned to latter segment bone.
+    # Bottom corners (1: lb, 2: rb) are skinned based on cumulative distance along corner line:
+    #   p0: former segment end inset (loop 6)
+    #   p1: membrane support 1 (loop 1)
+    #   p2: membrane middle (loop 2)
+    #   p3: membrane support 2 (loop 3)
+    #   p4: latter segment start inset (loop 1)
+    num_joints = num_segments - 1
+    for joint_idx in range(1, num_joints + 1):
+        j_former = joint_indices[joint_idx - 1]
+        j_latter = joint_indices[joint_idx]
+
+        # Upper corners: 100% latter segment
+        for corner_idx in (3, 4):
+            for loop_idx in (1, 2, 3):
+                pid = membrane_id_fn(joint_idx, loop_idx, corner_idx)
+                if pid in id_to_point:
+                    weights[id_to_point[pid].number()] = [(j_latter, 1.0)]
+
+        # Bottom corners: cumulative distance along corner path
+        for corner_idx in (1, 2):
+            id_p0 = segment_id_fn(joint_idx, 6, corner_idx)
+            id_p1 = membrane_id_fn(joint_idx, 1, corner_idx)
+            id_p2 = membrane_id_fn(joint_idx, 2, corner_idx)
+            id_p3 = membrane_id_fn(joint_idx, 3, corner_idx)
+            id_p4 = segment_id_fn(joint_idx + 1, 1, corner_idx)
+
+            pts = [id_to_point[x] for x in (id_p0, id_p1, id_p2, id_p3, id_p4)]
+            dists = [0.0]
+            for a, b in zip(pts[:-1], pts[1:]):
+                dists.append(dists[-1] + a.position().distanceTo(b.position()))
+            total_d = dists[-1]
+            assert total_d > 1e-6, f"Expected non-zero corner line distance at joint {joint_idx}"
+
+            for idx, pt in enumerate(pts[1:4], start=1):
+                t = max(0.0, min(1.0, dists[idx] / total_d))
+                weights[pt.number()] = [
+                    (j_former, round(1.0 - t, 4)),
+                    (j_latter, round(t, 4)),
+                ]
 
 
 def _collect_bone_names() -> list[str]:
