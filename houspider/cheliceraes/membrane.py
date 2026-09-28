@@ -141,9 +141,17 @@ def inset_start_membrane(node: hou.SopNode) -> None:
     )
     dist = ratio * lower.position().distanceTo(upper.position())
 
+    m2, m3, m4 = points_from_geo(
+        geo,
+        cheliceraemembrane(2),
+        cheliceraemembrane(3),
+        cheliceraemembrane(4),
+    )
+    recess_normal = (m2.position() - m3.position()).cross(m4.position() - m3.position()).normalized()
+
     start_points = points_from_geo(geo, *(cheliceraestart(j) for j in range(1, 5)))
     start_prim = next(prim for prim in start_points[0].prims() if all(pt in start_points for pt in prim.points()))
-    _inset_and_recess([start_prim], dist / 4, dist, delete_inset_prims=True)
+    _inset_and_recess([start_prim], dist / 4, dist, delete_inset_prims=True, recess_normal=recess_normal)
 
     for j, pt in enumerate(start_points, start=1):
         set_point_id(pt, cheliceraestartmembranesupport(j))
@@ -170,10 +178,11 @@ def _inset_and_recess(
     inset_dist: float,
     recess_dist: float,
     delete_inset_prims: bool = False,
+    recess_normal: hou.Vector3 | None = None,
 ) -> list[hou.Prim]:
     geo = prims[0].geometry()
     inner = inset_inner_prims(geo, prims, inset_dist, use_ratio=False)
-    norm = inner[0].normal()
+    norm = recess_normal if recess_normal is not None else inner[0].normal()
     inner_pts = list({pt.number(): pt for prim in inner for pt in prim.points()}.values())
     if delete_inset_prims:
         inner[0].geometry().deletePrims(inner, keep_points=True)
