@@ -1,20 +1,21 @@
-import hou
-from houkit.attributer import add_prim_attrib
+from hou import Geometry, Point
 from houkit.models import Moject
 
-from . import membrane, segment
-from .attributes import LegParam
+from . import membrane
+from .attributing import attribute_segment_bases
+from .models import LimbParam, LimbAttributes
+from .segment import build_segment_tubes, inset_segment_thickness, add_segment_loop_cuts
 
 
-def build_leg(
-    geo: hou.Geometry,
-    param: LegParam,
-) -> Moject[tuple[list[hou.Point], list[hou.Point], list[hou.Point]]]:
-    add_prim_attrib(geo, "region", "")
-
-    cube_pts, warnings = segment.build_segment_bases(geo, param)
-    thickness_pts = segment.inset_segment_thickness(geo, cube_pts, param.support_loop_ratio)
-    seg_pts = segment.add_segment_loop_cuts(geo, cube_pts, param.support_loop_ratio)
+def build_segment_bases(
+    geo: Geometry,
+    param: LimbParam,
+    attributes: LimbAttributes,
+) -> Moject[tuple[list[Point], list[Point], list[Point]]]:
+    """Build and attribute segment tubes, thickness loops, and membranes for a limb."""
+    cube_pts, messages = build_segment_tubes(geo, param)
+    thickness_pts = inset_segment_thickness(geo, cube_pts, param.support_loop_ratio)
+    seg_pts = add_segment_loop_cuts(geo, cube_pts, param.support_loop_ratio)
     mem_pts = membrane.fill_membranes(geo, thickness_pts)
     all_mem_pts = membrane.add_membrane_loop_cuts(
         geo,
@@ -24,4 +25,7 @@ def build_leg(
         param.support_loop_ratio,
     )
     membrane.close_tarsus(geo, seg_pts, param.tarsus_wedge_angle)
-    return Moject((seg_pts, thickness_pts, all_mem_pts), warnings)
+
+    attribute_segment_bases(geo, attributes, seg_pts, thickness_pts, all_mem_pts)
+    return Moject((seg_pts, thickness_pts, all_mem_pts), messages)
+

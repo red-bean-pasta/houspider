@@ -1,13 +1,10 @@
 import math
 
 import hou
+from houkit.topology import fill_face, points_to_positions
 
-from houkit.attributer import add_prim_attrib
-from houkit.topology import points_to_positions
-
+from ..helper import bridge_loops
 from .helper import loop_cut_tube
-from ..helper import bridge_loops, fill_face_with_attr
-from .attributes import Region
 
 
 def fill_membranes(
@@ -21,7 +18,6 @@ def fill_membranes(
     if not thickness_pts:
         return []
 
-    add_prim_attrib(geo, "region", "")
     assert len(thickness_pts) % 8 == 0, f"Expected thickness_pts length to be a multiple of 8, got {len(thickness_pts)}"
 
     membrane_points: list[hou.Point] = []
@@ -91,7 +87,7 @@ def close_tarsus(
     p_lb, p_rb, p_ru, p_lu = seg_pts[-4:]
 
     # [lb, rb, ru, lu] winding normal points along -Z (out of tarsus tip)
-    fill_face_with_attr(geo, [p_lb, p_rb, p_ru, p_lu], "region", Region.LEGSEGMENT)
+    fill_face([p_lb, p_rb, p_ru, p_lu])
 
     pos_lb, pos_rb, pos_ru, pos_lu = points_to_positions([p_lb, p_rb, p_ru, p_lu])
     offset_y = pos_lu.y() - pos_lb.y()
@@ -111,8 +107,8 @@ def _add_membrane_joint(
     midpoint_positions = _get_membrane_joint_midpoint_positions(former_end, latter_start)
     mid_loop = list(_create_membrane_midpoints(geo, midpoint_positions))
 
-    bridge_loops(geo, former_end, mid_loop, primitive_attr=("region", Region.LEGMEMBRANE))
-    bridge_loops(geo, mid_loop, latter_start, primitive_attr=("region", Region.LEGMEMBRANE))
+    bridge_loops(geo, former_end, mid_loop)
+    bridge_loops(geo, mid_loop, latter_start)
     return mid_loop
 
 

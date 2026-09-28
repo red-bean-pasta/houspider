@@ -9,8 +9,8 @@ from houkit.topology import fill_face
 
 from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
 from ..helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
-from ..segments.models import LimbParam
-from ..segments.build import build_leg
+from ..segments.models import LimbAttributes, LimbParam
+from ..segments.build import build_segment_bases
 from .attributes import Region, pedipalpcoxabuffer, pedipalpmembrane, pedipalpsegment
 
 
@@ -135,87 +135,37 @@ def _build_segments(
 ) -> Moject[tuple[list[hou.Point], list[hou.Point], list[hou.Point]]]:
     geo = node.geometry()
     param = _get_pedipalp_param(node)
-    result = build_leg(geo, param)
+    attributes = _get_pedipalp_attributes()
+    result = build_segment_bases(geo, param, attributes)
     (all_seg_pts, thickness_pts, all_mem_pts), _ = result
 
-    for prim in geo.prims():
-        r = prim.stringAttribValue("region")
-        if r == "legsegment":
-            prim.setAttribValue("region", Region.PEDIPALPSEGMENT)
-        elif r == "legmembrane":
-            prim.setAttribValue("region", Region.PEDIPALPMEMBRANE)
-
-    _attribute_pedipalp_points(1, all_seg_pts, thickness_pts, all_mem_pts)
+    _attribute_pedipalp_coxa_buffers(1, all_seg_pts[:8])
 
     return result
 
 
-def _attribute_pedipalp_points(
+def _get_pedipalp_attributes(side: int = 1) -> LimbAttributes:
+    return LimbAttributes(
+        segment_region=Region.PEDIPALPSEGMENT,
+        membrane_region=Region.PEDIPALPMEMBRANE,
+        segment_id=lambda a: pedipalpsegment(side, *a),
+        membrane_id=lambda a: pedipalpmembrane(side, *a),
+    )
+
+
+def _attribute_pedipalp_coxa_buffers(
     side: int,
-    seg_pts: list[hou.Point],
-    thickness_pts: list[hou.Point],
-    mem_pts: list[hou.Point],
+    coxa_pts: list[hou.Point],
 ) -> None:
-    """Assign ID attributes to all segment, thickness, and membrane points of a pedipalp."""
-    # 1. Coxa (seg 1)
     # Loop 0: start loop (to be pruned to start 3)
-    for corner_offset, pt in enumerate(seg_pts[0:4]):
+    for corner_offset, pt in enumerate(coxa_pts[0:4]):
         corner_idx = corner_offset + 1
         set_point_id(pt, pedipalpcoxabuffer(side, "start", corner_idx))
 
     # Loop 1: start support loop (to be deleted in delete_start_coxa_supports)
-    for corner_offset, pt in enumerate(seg_pts[4:8]):
+    for corner_offset, pt in enumerate(coxa_pts[4:8]):
         corner_idx = corner_offset + 1
         set_point_id(pt, pedipalpcoxabuffer(side, "support", corner_idx))
-
-    # Loop 2: end support loop (loop 4)
-    for corner_offset, pt in enumerate(seg_pts[8:12]):
-        corner_idx = corner_offset + 1
-        set_point_id(pt, pedipalpsegment(side, 1, 4, corner_idx))
-
-    # Loop 3: end loop (loop 5)
-    for corner_offset, pt in enumerate(seg_pts[12:16]):
-        corner_idx = corner_offset + 1
-        set_point_id(pt, pedipalpsegment(side, 1, 5, corner_idx))
-
-    # 2. Other segments (seg 2..6: trochanter, femur, patella, tibia, tarsus)
-    # Loops: 2 (start), 3 (start_support), 4 (end_support), 5 (end)
-    num_segs = len(seg_pts) // 16
-    for seg_i in range(1, num_segs):
-        seg_idx = seg_i + 1
-        base = seg_i * 16
-        for loop_offset, loop_idx in enumerate([2, 3, 4, 5]):
-            loop_pts = seg_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
-            for corner_offset, pt in enumerate(loop_pts):
-                corner_idx = corner_offset + 1
-                set_point_id(pt, pedipalpsegment(side, seg_idx, loop_idx, corner_idx))
-
-    # 3. Thickness points (5 joints: 1..5)
-    # Former segment end inset (loop 6) and latter segment start inset (loop 1)
-    num_joints = len(thickness_pts) // 8
-    for joint_i in range(num_joints):
-        former_seg = joint_i + 1
-        latter_seg = joint_i + 2
-        base = joint_i * 8
-        former_inset = thickness_pts[base : base + 4]
-        latter_inset = thickness_pts[base + 4 : base + 8]
-        for corner_offset, pt in enumerate(former_inset):
-            corner_idx = corner_offset + 1
-            set_point_id(pt, pedipalpsegment(side, former_seg, 6, corner_idx))
-        for corner_offset, pt in enumerate(latter_inset):
-            corner_idx = corner_offset + 1
-            set_point_id(pt, pedipalpsegment(side, latter_seg, 1, corner_idx))
-
-    # 4. Membrane points (5 joints: 1..5)
-    # Loop 1: former support, loop 2: middle, loop 3: latter support
-    for joint_i in range(num_joints):
-        joint_idx = joint_i + 1
-        base = joint_i * 12
-        for loop_offset, loop_idx in enumerate([1, 2, 3]):
-            loop_pts = mem_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
-            for corner_offset, pt in enumerate(loop_pts):
-                corner_idx = corner_offset + 1
-                set_point_id(pt, pedipalpmembrane(side, joint_idx, loop_idx, corner_idx))
 
 
 def _get_pedipalp_param(

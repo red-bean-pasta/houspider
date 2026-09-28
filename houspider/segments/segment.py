@@ -1,41 +1,10 @@
 from hou import Geometry, Point
 from houkit.models import Moject
 
-from ..helper import bridge_loops
-from .models import LimbParam
 from .cube import get_cube_points
 from .helper import inset_loop, loop_cut_tube
-
-
-def build_segment_bases(
-    geo: Geometry,
-    param: LimbParam,
-) -> Moject[list[Point]]:
-    """Build the basic tubes for all segments of a leg.
-
-    Each segment consists of 8 points: 4 for the start loop and 4 for the end loop.
-    Every 4-point loop in the leg strictly follows corner ordering:
-      Index 0 (corner 1): Left Bottom  (-X, -Y)
-      Index 1 (corner 2): Right Bottom (+X, -Y)
-      Index 2 (corner 3): Right Upper  (+X, +Y)
-      Index 3 (corner 4): Left Upper   (-X, +Y)
-    """
-    segments, messages = get_cube_points(param)
-
-    seg_pts: list[Point] = []
-    for seg in segments:
-        cur_seg_pts = [geo.createPoint() for _ in range(8)]
-        for pt, pos in zip(cur_seg_pts, seg):
-            pt.setPosition(pos)
-        seg_pts.extend(cur_seg_pts)
-
-        # Loop points are ordered [lb, rb, ru, lu], winding clockwise looking into the tube,
-        # so bridge_loops automatically produces outward-facing surface normals.
-        start_loop = cur_seg_pts[:4]
-        end_loop = cur_seg_pts[4:]
-        bridge_loops(geo, start_loop, end_loop, primitive_attr=("region", Region.LEGSEGMENT))
-
-    return Moject(seg_pts, messages)
+from .models import LimbParam
+from ..helper import bridge_loops
 
 
 def inset_segment_thickness(
@@ -110,6 +79,37 @@ def add_segment_loop_cuts(
     return all_seg_pts
 
 
+def build_segment_tubes(
+    geo: Geometry,
+    param: LimbParam,
+) -> Moject[list[Point]]:
+    """Build the basic tubes for all segments of a leg.
+
+    Each segment consists of 8 points: 4 for the start loop and 4 for the end loop.
+    Every 4-point loop in the leg strictly follows corner ordering:
+      Index 0 (corner 1): Left Bottom  (-X, -Y)
+      Index 1 (corner 2): Right Bottom (+X, -Y)
+      Index 2 (corner 3): Right Upper  (+X, +Y)
+      Index 3 (corner 4): Left Upper   (-X, +Y)
+    """
+    segments, messages = get_cube_points(param)
+
+    seg_pts: list[Point] = []
+    for seg in segments:
+        cur_seg_pts = [geo.createPoint() for _ in range(8)]
+        for pt, pos in zip(cur_seg_pts, seg):
+            pt.setPosition(pos)
+        seg_pts.extend(cur_seg_pts)
+
+        # Loop points are ordered [lb, rb, ru, lu], winding clockwise looking into the tube,
+        # so bridge_loops automatically produces outward-facing surface normals.
+        start_loop = cur_seg_pts[:4]
+        end_loop = cur_seg_pts[4:]
+        bridge_loops(geo, start_loop, end_loop)
+
+    return Moject(seg_pts, messages)
+
+
 def _add_segment_thickness_loops(
     geo: Geometry,
     former_end: list[Point],
@@ -125,7 +125,6 @@ def _add_segment_thickness_loops(
         former_end,
         former_inset,
         reverse=False,
-        primitive_attr=("region", Region.LEGSEGMENT),
     )
 
     # Latter start faces outward along +Z into the joint (reverse=True gives [0, 0, 1] normal)
@@ -134,6 +133,5 @@ def _add_segment_thickness_loops(
         latter_start,
         latter_inset,
         reverse=True,
-        primitive_attr=("region", Region.LEGSEGMENT),
     )
     return former_inset, latter_inset

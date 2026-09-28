@@ -10,9 +10,9 @@ from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_posi
 from ..attributes import GlobalAttrib
 from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
 from ..helper import points_from_geo, set_point_id
-from ..segments.models import LimbParam
-from ..segments.build import build_leg
-from .attributes import legmembrane, legsegment
+from ..segments.models import LimbAttributes, LimbParam
+from ..segments.build import build_segment_bases
+from .attributes import Region, legmembrane, legsegment
 
 
 def record_global_info(
@@ -70,7 +70,8 @@ def extrude_legs(
         origin = top_mid + direction * bottom_z_offset
 
         param = _get_leg_param(node, i)
-        (seg_pts, thickness_pts, mem_pts), warnings = build_leg(geo, param)
+        attributes = _get_leg_attributes(leg_idx)
+        (seg_pts, thickness_pts, mem_pts), warnings = build_segment_bases(geo, param, attributes)
         for w in warnings:
             node.addWarning(w)
 
@@ -79,7 +80,7 @@ def extrude_legs(
             pt.setPosition(q.rotate(pt.position()) + origin)
 
         buffer_loop, pentagon_pts = _adjust_coxa(node, pts, mid_pts, seg_pts[:16])
-        _attribute_leg_points(leg_idx, seg_pts, thickness_pts, mem_pts, buffer_loop, pentagon_pts)
+        _attribute_coxa_buffer(leg_idx, buffer_loop, pentagon_pts)
         geo.deletePoints(seg_pts[:4])
 
 
@@ -117,6 +118,15 @@ def _get_leg_param(
         minimum_membrane=control_params.joint_clearance_limits,
         support_loop_ratio=control_params.joint_support_loop_ratio,
         tarsus_wedge_angle=control_params.tarsus_wedge_angle,
+    )
+
+
+def _get_leg_attributes(leg_index: int) -> LimbAttributes:
+    return LimbAttributes(
+        segment_region=Region.LEGSEGMENT,
+        membrane_region=Region.LEGMEMBRANE,
+        segment_id=lambda a: legsegment(leg_index, *a),
+        membrane_id=lambda a: legmembrane(leg_index, *a),
     )
 
 
@@ -162,67 +172,17 @@ def _adjust_coxa(
     )
 
 
-def _attribute_leg_points(
+def _attribute_coxa_buffer(
     leg_idx: int,
-    seg_pts: list[hou.Point],
-    thickness_pts: list[hou.Point],
-    mem_pts: list[hou.Point],
     buffer_loop: list[hou.Point],
     pentagon_pts: list[hou.Point],
 ) -> None:
-    """Assign ID attributes to all segment, thickness, and membrane points of a leg."""
-    # 1. Attribute segment points (7 segments)
-    # Coxa (seg 1): loop 3 (start wedge), loop 4 (end support), loop 5 (end)
-    for loop_offset, loop_idx in enumerate([3, 4, 5], start=1):
-        loop_pts = seg_pts[loop_offset * 4 : (loop_offset + 1) * 4]
-        for corner_offset, pt in enumerate(loop_pts):
-            corner_idx = corner_offset + 1
-            set_point_id(pt, legsegment(leg_idx, 1, loop_idx, corner_idx))
-
-    # Coxa start support buffer loop: loop index 2 [lb, rb, ru, lu]
     for corner_offset, pt in enumerate(buffer_loop):
         corner_idx = corner_offset + 1
         set_point_id(pt, legsegment(leg_idx, 1, 2, corner_idx))
 
-    # Coxa socket pentagon & float points
     for k, pt in enumerate(pentagon_pts):
         set_point_id(pt, legsegment(leg_idx, 1, "buffer", k + 1))
-
-    # Other segments (seg 2..7): loops 2, 3, 4, 5
-    for seg_i in range(1, 7):
-        seg_idx = seg_i + 1
-        base = seg_i * 16
-        for loop_offset, loop_idx in enumerate([2, 3, 4, 5]):
-            loop_pts = seg_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
-            for corner_offset, pt in enumerate(loop_pts):
-                corner_idx = corner_offset + 1
-                set_point_id(pt, legsegment(leg_idx, seg_idx, loop_idx, corner_idx))
-
-    # 2. Attribute thickness points (6 joints, 2 loops each of 4 points:
-    #    former segment end inset (loop 6) and latter segment start inset (loop 1))
-    for joint_i in range(6):
-        former_seg = joint_i + 1
-        latter_seg = joint_i + 2
-        base = joint_i * 8
-        former_inset = thickness_pts[base : base + 4]
-        latter_inset = thickness_pts[base + 4 : base + 8]
-        for corner_offset, pt in enumerate(former_inset):
-            corner_idx = corner_offset + 1
-            set_point_id(pt, legsegment(leg_idx, former_seg, 6, corner_idx))
-        for corner_offset, pt in enumerate(latter_inset):
-            corner_idx = corner_offset + 1
-            set_point_id(pt, legsegment(leg_idx, latter_seg, 1, corner_idx))
-
-    # 3. Attribute membrane points (6 joints, 3 loops each of 4 points:
-    #    loop 1: former support, loop 2: middle, loop 3: latter support)
-    for joint_i in range(6):
-        joint_idx = joint_i + 1
-        base = joint_i * 12
-        for loop_offset, loop_idx in enumerate([1, 2, 3]):
-            loop_pts = mem_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
-            for corner_offset, pt in enumerate(loop_pts):
-                corner_idx = corner_offset + 1
-                set_point_id(pt, legmembrane(leg_idx, joint_idx, loop_idx, corner_idx))
 
 
 def _get_adjusted_coxa_support_positions(
