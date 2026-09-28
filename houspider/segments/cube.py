@@ -3,11 +3,11 @@ import math
 import hou
 from houkit.models import Moject
 
-from .models import LegParam
+from .models import LimbParam
 
 
 def get_cube_points(
-    param: LegParam,
+    param: LimbParam,
 ) -> Moject[list[list[hou.Vector3]]]:
     assert len(param.yaw_flex_specs) == len(param.length_ratios)
 

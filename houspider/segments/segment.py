@@ -2,14 +2,14 @@ from hou import Geometry, Point
 from houkit.models import Moject
 
 from ..helper import bridge_loops
-from .attributes import LegParam, Region
+from .models import LimbParam
 from .cube import get_cube_points
 from .helper import inset_loop, loop_cut_tube
 
 
 def build_segment_bases(
     geo: Geometry,
-    param: LegParam,
+    param: LimbParam,
 ) -> Moject[list[Point]]:
     """Build the basic tubes for all segments of a leg.
 

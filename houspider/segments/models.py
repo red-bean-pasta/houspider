@@ -1,9 +1,26 @@
-from dataclasses import dataclass
-from typing import Self
+from dataclasses import dataclass, fields
+from typing import Self, Callable
 
 
 @dataclass
-class LegParam:
+class LimbIdArgs:
+    segment_index: int
+    loop_index: int
+    corner_index: int
+
+    def __iter__(self):
+        return (getattr(self, f.name) for f in fields(self))
+
+@dataclass
+class LimbAttributes:
+    segment_region: str
+    membrane_region: str
+    segment_id: Callable[[LimbIdArgs], str]
+    membrane_id: Callable[[LimbIdArgs], str]
+
+
+@dataclass
+class LimbParam:
     coxa_width_length: tuple[float, float]
     length_ratios: tuple[float, ...] | list[float]
     yaw_flex_specs: tuple[tuple[float, float], ...]

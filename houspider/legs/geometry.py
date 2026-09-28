@@ -10,7 +10,7 @@ from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_posi
 from ..attributes import GlobalAttrib
 from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
 from ..helper import points_from_geo, set_point_id
-from ..segments.models import LegParam
+from ..segments.models import LimbParam
 from ..segments.build import build_leg
 from .attributes import legmembrane, legsegment
 
@@ -86,7 +86,7 @@ def extrude_legs(
 def _get_leg_param(
     node: hou.SopNode,
     leg_index: int,
-) -> LegParam:
+) -> LimbParam:
     geo = node.geometry()
     parent = get_parent(node)
     params = get_parms(parent, use_tuple=False)
@@ -105,7 +105,7 @@ def _get_leg_param(
 
     coxa_width_length = (coxa_width, coxa_length)
 
-    return LegParam.from_specs(
+    return LimbParam.from_specs(
         coxa_width_length=coxa_width_length,
         length_ratios=tuple(params.front_segment_length_ratios),
         max_segment_yaws=tuple(params.max_yaw_angles)[1:],

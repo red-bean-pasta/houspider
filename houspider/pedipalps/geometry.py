@@ -9,7 +9,7 @@ from houkit.topology import fill_face
 
 from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
 from ..helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
-from ..segments.models import LegParam
+from ..segments.models import LimbParam
 from ..segments.build import build_leg
 from .attributes import Region, pedipalpcoxabuffer, pedipalpmembrane, pedipalpsegment
 
@@ -220,7 +220,7 @@ def _attribute_pedipalp_points(
 
 def _get_pedipalp_param(
     node: hou.SopNode,
-) -> LegParam:
+) -> LimbParam:
     geo = node.geometry()
     pedipalp = get_parent(node)
     params = get_parms(pedipalp, use_tuple=False)
@@ -244,7 +244,7 @@ def _get_pedipalp_param(
     max_segment_yaws = tuple(leg_params.max_yaw_angles)[1:len(length_ratios) + 1]
     min_segment_flexes = tuple(leg_params.min_flex_angles)[1:len(length_ratios) + 1]
 
-    return LegParam.from_specs(
+    return LimbParam.from_specs(
         coxa_width_length=coxa_width_length,
         length_ratios=length_ratios,
         max_segment_yaws=max_segment_yaws,
