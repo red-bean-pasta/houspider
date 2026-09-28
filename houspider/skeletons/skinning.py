@@ -4,6 +4,7 @@ import hou
 from hou import OpNode, SopNode
 from houkit.noder import sopify
 
+from ..segments.attributes import Region
 from .attributes import (
     BodyJoint,
     LegJoint,
@@ -123,37 +124,65 @@ def _skin_limb(
     weights: dict[int, list[tuple[int, float]]],
 ) -> None:
     joint_indices = [bone_index_map[name] for name in bones]
-
-    prims, points = traverse_limb_prims(socket_points)
+    prims, _ = traverse_limb_prims(socket_points)
     membranes = group_membrane_rings(prims)
+    assert len(membranes) == len(bones) - 2, f"Expected {len(bones) - 2} membranes, got {len(membranes)}"
 
-    direction = get_local_z_direction(membranes[0][1])
+    boundaries: list[list[hou.Point]] = []
+    for _, m_pts in membranes:
+        b1, b2 = get_membrane_boundaries(m_pts)
+        boundaries.extend([b1, b2])
 
-    soft_pts: set[hou.Point] = set()
-    membrane_centers: list[float] = []
-    for m_idx, (m_pms, m_pts) in enumerate(membranes):
-        boundary1, boundary2 = get_membrane_boundaries(m_pts)
-        soft_pts.update(m_pts)
-        soft_pts.difference_update(boundary1, boundary2)
+    segments = _collect_segment_points(boundaries)
+    assert len(segments) == len(bones) - 1, f"Expected {len(bones) - 1} segments, got {len(segments)}"
 
-        z_center = sum(get_local_z_value(p, direction) for p in m_pts) / len(m_pts)
-        membrane_centers.append(z_center)
+    for s_idx, seg_pts in enumerate(segments):
+        joint_idx = joint_indices[s_idx]
+        for p in seg_pts:
+            weights[p.number()] = [(joint_idx, 1.0)]
 
+    for m_idx, (_, m_pts) in enumerate(membranes):
         _skin_membrane(
             m_pts,
             (joint_indices[m_idx], joint_indices[m_idx + 1]),
             weights,
         )
 
-    seg_pts = [p for p in points if p not in soft_pts]
-    for p in seg_pts:
-        z = get_local_z_value(p, direction)
-        assigned_joint = joint_indices[-2]
-        for m_idx, z_mid in enumerate(membrane_centers):
-            if z < z_mid:
-                assigned_joint = joint_indices[m_idx]
-                break
-        weights[p.number()] = [(assigned_joint, 1.0)]
+
+def _collect_segment_points(
+    boundaries: list[list[hou.Point]],
+) -> list[set[hou.Point]]:
+    segments: list[set[hou.Point]] = []
+
+    segments.append(_grow_segment(boundaries[0]))
+
+    num_intermediate = (len(boundaries) - 2) // 2
+    for i in range(1, num_intermediate + 1):
+        start_b = boundaries[2 * i - 1]
+        stop_b = set(boundaries[2 * i])
+        segments.append(_grow_segment(start_b, stop_b))
+
+    segments.append(_grow_segment(boundaries[-1]))
+    return segments
+
+
+def _grow_segment(
+    seeds: Collection[hou.Point],
+    stop_points: set[hou.Point] | None = None,
+) -> set[hou.Point]:
+    visited: set[hou.Point] = set(seeds)
+    queue: list[hou.Point] = list(seeds)
+
+    while queue:
+        pt = queue.pop(0)
+        for prim in pt.prims():
+            if prim.stringAttribValue("region") == Region.LEGSEGMENT:
+                for p in prim.points():
+                    if p not in visited:
+                        visited.add(p)
+                        if stop_points is None or p not in stop_points:
+                            queue.append(p)
+    return visited
 
 
 def _skin_membrane(
