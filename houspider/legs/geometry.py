@@ -20,9 +20,6 @@ def record_global_info(
     parent = get_parent(node)
     geo = node.geometry()
 
-    control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
-    add_global_attrib(geo, GlobalAttrib.SPINE_RATIO, control_params.segment_bulge_bias_ratio)
-
     params = get_parms(parent)
     joint_limits = {
         "min_flex_angles": tuple(params.min_flex_angles),
