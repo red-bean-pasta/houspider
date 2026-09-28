@@ -77,8 +77,9 @@ def extrude_legs(
         for pt in seg_pts + thickness_pts + mem_pts:
             pt.setPosition(q.rotate(pt.position()) + origin)
 
-        _adjust_coxa(node, pts, mid_pts, seg_pts[:16])
-        _attribute_leg_points(leg_idx, seg_pts, thickness_pts, mem_pts)
+        buffer_loop, pentagon_pts = _adjust_coxa(node, pts, mid_pts, seg_pts[:16])
+        _attribute_leg_points(leg_idx, seg_pts, thickness_pts, mem_pts, buffer_loop, pentagon_pts)
+        geo.deletePoints(seg_pts[:4])
 
 
 def _get_leg_param(
@@ -123,7 +124,7 @@ def _adjust_coxa(
     socket_points: list[hou.Point],
     socket_midpoints: list[hou.Point],
     coxa_points: list[hou.Point],
-) -> None:
+) -> tuple[list[hou.Point], list[hou.Point]]:
     assert len(coxa_points) == 16, f"Expected 16 coxa points, got {len(coxa_points)}"
     assert len(socket_points) == 4, f"Expected 4 socket points, got {len(socket_points)}"
     assert len(socket_midpoints) == 2, f"Expected 2 socket midpoints, got {len(socket_midpoints)}"
@@ -152,14 +153,12 @@ def _adjust_coxa(
         coxa_start_support_pts,
         support_loop_ratio,
     )
-    _build_coxa_socket_faces(
+    return _build_coxa_socket_faces(
         socket_points,
         socket_midpoints,
         coxa_start_support_pts,
         buffer_ratio,
     )
-
-    geo.deletePoints(coxa_start_pts)
 
 
 def _attribute_leg_points(
@@ -167,17 +166,32 @@ def _attribute_leg_points(
     seg_pts: list[hou.Point],
     thickness_pts: list[hou.Point],
     mem_pts: list[hou.Point],
+    buffer_loop: list[hou.Point],
+    pentagon_pts: list[hou.Point],
 ) -> None:
     """Assign ID attributes to all segment, thickness, and membrane points of a leg."""
     # 1. Attribute segment points (7 segments)
-    # Loops: 2 (start), 3 (start_support), 4 (end_support), 5 (end).
-    # Coxa's start loop (loop 2) is deleted in _adjust_coxa because it connects to socket faces.
-    for seg_i in range(7):
+    # Coxa (seg 1): loop 3 (start wedge), loop 4 (end support), loop 5 (end)
+    for loop_offset, loop_idx in enumerate([3, 4, 5], start=1):
+        loop_pts = seg_pts[loop_offset * 4 : (loop_offset + 1) * 4]
+        for corner_offset, pt in enumerate(loop_pts):
+            corner_idx = corner_offset + 1
+            set_point_id(pt, legsegment(leg_idx, 1, loop_idx, corner_idx))
+
+    # Coxa start support buffer loop: loop index 2 [lb, rb, ru, lu]
+    for corner_offset, pt in enumerate(buffer_loop):
+        corner_idx = corner_offset + 1
+        set_point_id(pt, legsegment(leg_idx, 1, 2, corner_idx))
+
+    # Coxa socket pentagon & float points
+    for k, pt in enumerate(pentagon_pts):
+        set_point_id(pt, legsegment(leg_idx, 1, "buffer", k + 1))
+
+    # Other segments (seg 2..7): loops 2, 3, 4, 5
+    for seg_i in range(1, 7):
         seg_idx = seg_i + 1
         base = seg_i * 16
-        loop_indices = [3, 4, 5] if seg_i == 0 else [2, 3, 4, 5]
-        for loop_idx in loop_indices:
-            loop_offset = loop_idx - 2
+        for loop_offset, loop_idx in enumerate([2, 3, 4, 5]):
             loop_pts = seg_pts[base + loop_offset * 4 : base + (loop_offset + 1) * 4]
             for corner_offset, pt in enumerate(loop_pts):
                 corner_idx = corner_offset + 1
@@ -271,7 +285,7 @@ def _build_coxa_socket_faces(
     socket_midpoints: list[hou.Point],
     support_points: list[hou.Point],
     buffer_ratio: float,
-) -> None:
+) -> tuple[list[hou.Point], list[hou.Point]]:
     # su: socket upper, sb: socket bottom
     su1, su2, sb1, sb2 = socket_points
     # s_mu, s_mb: socket midpoint upper / bottom
@@ -280,14 +294,14 @@ def _build_coxa_socket_faces(
     eb1, eb2, eu2, eu1 = support_points
 
     # Upper pentagon: su1, s_mu, su2, eu2, eu1
-    mid_u, _, b_eu2, b_eu1 = fill_pentagon_with_buffer(
+    mid_u, u_inner, b_eu2, b_eu1 = fill_pentagon_with_buffer(
         [su1, s_mu, su2, eu2, eu1],
         (eu2, eu1),
         buffer_ratio,
         (su1, eu1),
     )
     # Bottom pentagon: sb2, s_mb, sb1, eb1, eb2
-    mid_b, _, b_eb1, b_eb2 = fill_pentagon_with_buffer(
+    mid_b, b_inner, b_eb1, b_eb2 = fill_pentagon_with_buffer(
         [sb2, s_mb, sb1, eb1, eb2],
         (eb1, eb2),
         buffer_ratio,
@@ -302,6 +316,10 @@ def _build_coxa_socket_faces(
     fill_face([su1, sb1, mid_b, mid_u])
     fill_face([mid_u, mid_b, b_eb1, b_eu1])
     fill_face([b_eu1, b_eb1, eb1, eu1])
+
+    buffer_loop = [b_eb1, b_eb2, b_eu2, b_eu1]
+    pentagon_pts = [mid_u, u_inner, mid_b, b_inner]
+    return buffer_loop, pentagon_pts
 
 
 def get_front_coxa_socket_width(geo: hou.Geometry) -> float:
