@@ -3,7 +3,7 @@ import math
 import hou
 
 from houkit.attributer import add_prim_attrib, deduplicate_point_attribs
-from houkit.noder import get_parent
+from houkit.noder import get_control
 from houkit.parameterizer import get_float_parm, get_vector3_parm
 from houkit.topology import outset
 from .attributes import ID, Region, basesternum, basesternummiddle, outer_loop_ids
@@ -131,8 +131,8 @@ def cleanup_connected_side_flap_ids(node: hou.SopNode) -> None:
 
 def rotate_coxa_flaps(node: hou.SopNode) -> None:
     geo = node.geometry()
-    parent = get_parent(node)
-    angle = get_float_parm(parent, "coxa_flap_rise_angle")
+    control = get_control(node, "CONTROL")
+    angle = get_float_parm(control, "coxa_flap_rise_angle")
     clamped_angle = max(0.0, min(90.0, angle))
 
     rad = math.radians(clamped_angle)
@@ -250,9 +250,9 @@ def adjust_mouth(node: hou.SopNode) -> None:
 
 def extrude_base_buffer(node: hou.SopNode) -> None:
     geo = node.geometry()
-    parent = get_parent(node)
+    control = get_control(node, "CONTROL")
 
-    dist = get_vector3_parm(parent, "membrane_ratio").x() * 50
+    dist = get_vector3_parm(control, "membrane_ratio").x() * 50
     outer_prims = [
         prim
         for component in outset(list(geo.prims()), dist, use_ratio=False).values()

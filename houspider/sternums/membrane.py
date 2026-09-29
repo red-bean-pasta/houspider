@@ -1,7 +1,7 @@
 import hou
 
 from houkit.attributer import add_prim_attrib, deduplicate_point_attribs, set_point_attribs_by_position
-from houkit.noder import get_control, get_parent
+from houkit.noder import get_control
 from houkit.parameterizer import get_parms
 from houkit.topology import outset
 from houkit.topologies.sorter import Axis
@@ -18,11 +18,9 @@ def add_prim_regions(node: hou.SopNode) -> None:
 
 def outset_sternum_loop(node: hou.SopNode) -> None:
     geo = node.geometry()
-    parent = get_parent(node)
-    params = get_parms(parent, use_tuple=False)
     control_params = get_parms(get_control(node, "CONTROL"), use_tuple=False)
 
-    membrane_width = params.membrane_ratio * control_params.half_width
+    membrane_width = control_params.membrane_ratio * control_params.half_width
     support_dist = membrane_width
     dist = membrane_width
     assert dist > 0.0, f"Expected positive sternum membrane inset distance, got {dist}"

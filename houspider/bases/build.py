@@ -14,6 +14,7 @@ def build(prosoma: hou.SopNode, sternum: hou.SopNode) -> hou.SopNode:
     base = add_reloadable_subnet(prosoma, "base")
     base.setInput(0, sternum)
     _add_parameters(base)
+    _add_controls(base)
 
     sternum_source = base.indirectInputs()[0]
 
@@ -69,8 +70,12 @@ def _add_parameters(base: hou.SopNode) -> None:
         label="Coxa Flap Extension",
         help="Outward reach from the sternum rim, relative to rim-edge length.",
     )
+
+
+def _add_controls(parent: hou.SopNode) -> hou.SopNode:
+    control = parent.createNode("null", "CONTROL")
     add_float_parm(
-        base,
+        control,
         "coxa_flap_rise_angle",
         1,
         12,
@@ -79,7 +84,7 @@ def _add_parameters(base: hou.SopNode) -> None:
         help="0° lies in the sternum plane; 90° raises the flap edge vertically.",
     )
     add_float_parm(
-        base,
+        control,
         "membrane_ratio",
         3,
         (0.02, 0.1, 0.02),
@@ -87,3 +92,4 @@ def _add_parameters(base: hou.SopNode) -> None:
         label="Membrane Width",
         help="X (1st) sets side membrane width. Y (2nd) sets upper membrane width. Z (3rd) sets lower membrane width.",
     )
+    return control

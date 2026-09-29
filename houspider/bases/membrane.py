@@ -3,7 +3,7 @@ from collections.abc import Collection
 import hou
 
 from houkit.attributer import points_by_attrib
-from houkit.noder import get_parent
+from houkit.noder import get_control
 from houkit.parameterizer import get_vector3_parm
 from ..helper import (
     deduplicate_id_attr,
@@ -27,8 +27,8 @@ from ..sternums import attributes as sternum_attributes
 
 def inset_membrane(node: hou.SopNode) -> None:
     geo = node.geometry()
-    parent = get_parent(node)
-    ratios = get_vector3_parm(parent, "membrane_ratio")
+    control = get_control(node, "CONTROL")
+    ratios = get_vector3_parm(control, "membrane_ratio")
     side_ratio = ratios.x()
     points = points_by_id(geo)
 

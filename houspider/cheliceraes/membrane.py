@@ -1,6 +1,6 @@
 import hou
 
-from houkit.noder import get_parent
+from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_float_parm, get_parms
 from houkit.topology import fill_face, get_prim_centroid
 from .attributes import Region, cheliceraemembrane, cheliceraestart, cheliceraestartmembranesupport
@@ -18,7 +18,7 @@ from ..helper import (
 
 def inset_flaps(node: hou.SopNode) -> None:
     geo = node.geometry()
-    ratio = get_float_parm(get_parent(node), "membrane_ratio")
+    ratio = get_float_parm(get_control(node, "CONTROL"), "membrane_ratio")
 
     lower, upper = points_from_geo(
         geo,
@@ -133,7 +133,7 @@ def add_start_membrane(node: hou.SopNode) -> None:
 
 def inset_start_membrane(node: hou.SopNode) -> None:
     geo: hou.Geometry = node.geometry()
-    ratio = get_float_parm(get_parent(node), "membrane_ratio")
+    ratio = get_float_parm(get_control(node, "CONTROL"), "membrane_ratio")
     lower, upper = points_from_geo(
         geo,
         base_attributes.basesternum(0),

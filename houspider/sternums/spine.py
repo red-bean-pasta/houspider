@@ -2,7 +2,7 @@ import hou
 
 from houkit.attributer import deduplicate_point_attribs
 from houkit.geomath import is_equal_approx
-from houkit.noder import get_control, get_parent
+from houkit.noder import get_control
 from houkit.parameterizer import get_parms
 from houkit.topology import inset
 from ..helper import points_by_id, positions_from_geo
@@ -10,9 +10,8 @@ from .attributes import ID, outer_loop_ids, sternumrim
 
 def inset_spine_loop(node: hou.SopNode) -> None:
     geo = node.geometry()
-    parent = get_parent(node)
-    params = get_parms(parent, use_tuple=False)
-    ratio_x, _ = params.spine_loop_position_ratio
+    control_params = get_parms(get_control(node, "CONTROL"), use_tuple=False)
+    ratio_x, _ = control_params.spine_loop_position_ratio
     assert 0.0 < ratio_x <= 1.0
 
     if not is_equal_approx(ratio_x, 1.0):
@@ -22,15 +21,13 @@ def inset_spine_loop(node: hou.SopNode) -> None:
 
 def elevate_spine_loop(node: hou.SopNode) -> None:
     geo = node.geometry()
-    parent = get_parent(node)
-    params = get_parms(parent, use_tuple=False)
     control_params = get_parms(get_control(node, "CONTROL"), use_tuple=False)
 
-    ratio_x, ratio_y = params.spine_loop_position_ratio
+    ratio_x, ratio_y = control_params.spine_loop_position_ratio
     if is_equal_approx(ratio_x, 1.0) or is_equal_approx(ratio_y, 0.0):
         return
 
-    depth = control_params.half_width * params.spine_depth_ratio
+    depth = control_params.half_width * control_params.spine_depth_ratio
     rest_y = -depth * ratio_y
 
     for point in geo.points():
@@ -42,13 +39,10 @@ def elevate_spine_loop(node: hou.SopNode) -> None:
 
 def descend_sternum_spine(node: hou.SopNode) -> None:
     geo = node.geometry()
-    parent = get_parent(node)
-
-    params = get_parms(parent, use_tuple=False)
     control_params = get_parms(get_control(node, "CONTROL"), use_tuple=False)
 
-    depth = control_params.half_width * params.spine_depth_ratio
-    power = params.spine_descent_power
+    depth = control_params.half_width * control_params.spine_depth_ratio
+    power = control_params.spine_descent_power
     points = points_by_id(geo)
 
     top, middle, bottom = positions_from_geo(
@@ -84,4 +78,3 @@ def _get_eased_depth(
     assert span != 0.0, "Expected non-zero span for easing interpolation"
     t = max(0.0, min(1.0, (x - x0) / span))
     return y0 + (y1 - y0) * (t ** power)
-

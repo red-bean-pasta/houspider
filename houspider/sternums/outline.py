@@ -22,7 +22,7 @@ def left_half(node: hou.SopNode) -> None:
     forward_height = w * front_ratio
     back_half = w * back_ratio
     back_length = math.sqrt(back_half * back_half + w * w) / (2.0 * math.sin(angle / 2.0))
-    top_width = w * params.front_width_ratio
+    top_width = w * control_params.front_width_ratio
 
     p0 = hou.Vector3(0.0, 0.0, -forward_height)
     p1 = hou.Vector3(top_width, 0.0, -forward_height)
@@ -117,4 +117,3 @@ def add_center_spine(node: hou.SopNode) -> None:
             for index, position in enumerate(positions, start=1)
         ],
     )
-

@@ -61,7 +61,7 @@ def add_parameters(subnet: hou.OpNode) -> None:
         (0.17, 0.8, 0.4, 0.45, 0.4),
         (0.0, None),
         hou.parmNamingScheme.Base1,
-        label="Other Segment Lengths",
+        label="Segment Lengths",
         help="One length ratio per post-coxa pedipalps segment, measured against pedipalps coxa length.",
     )
     add_float_parm(

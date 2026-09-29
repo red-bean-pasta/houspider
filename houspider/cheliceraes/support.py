@@ -3,7 +3,7 @@ import math
 import hou
 
 from houkit.attributer import points_by_attrib
-from houkit.noder import get_parent
+from houkit.noder import get_control
 from houkit.parameterizer import get_float_parm
 from houkit.topology import find_prim, loop_cut, merge_points, offset_point, traverse_faces_between_edges
 from ..dorsals.attributes import dorsalbasesupport, dorsalchelicerae
@@ -330,7 +330,7 @@ def _get_inset_chelicerae_support_point(points_by_id: dict[str, set[hou.Point]],
 
 def add_start_membrane_support_loops(node: hou.SopNode) -> None:
     geo: hou.Geometry = node.geometry()
-    ratio = get_float_parm(get_parent(node), "membrane_ratio")
+    ratio = get_float_parm(get_control(node, "CONTROL"), "membrane_ratio")
     membrane, support = points_from_geo(
         geo,
         cheliceraemembrane(1),
@@ -342,7 +342,7 @@ def add_start_membrane_support_loops(node: hou.SopNode) -> None:
 
 def add_start_section_support_loops(node: hou.SopNode) -> None:
     geo: hou.Geometry = node.geometry()
-    ratio = get_float_parm(get_parent(node), "membrane_ratio")
+    ratio = get_float_parm(get_control(node, "CONTROL"), "membrane_ratio")
     start, middle = points_from_geo(
         geo,
         cheliceraestart(2),

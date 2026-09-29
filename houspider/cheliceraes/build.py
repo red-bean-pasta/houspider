@@ -17,6 +17,7 @@ def build(prosoma: hou.SopNode, source: hou.SopNode) -> hou.SopNode:
     chelicerae = add_reloadable_subnet(prosoma, "chelicerae")
     chelicerae.setInput(0, source)
     _add_parameters(chelicerae)
+    _add_controls(chelicerae)
 
     right_membrane = sopify_chain(
         chelicerae,
@@ -67,15 +68,6 @@ def build(prosoma: hou.SopNode, source: hou.SopNode) -> hou.SopNode:
 
 
 def _add_parameters(chelicerae: hou.SopNode) -> None:
-    add_float_parm(
-        chelicerae,
-        "membrane_ratio",
-        1,
-        0.035,
-        (0.0, None),
-        label="Membrane Width",
-        help="Shared prosoma setting. Each region applies it against its own local membrane scale.",
-    )
     add_heading(
         chelicerae,
         "End Section",
@@ -135,3 +127,17 @@ def _add_parameters(chelicerae: hou.SopNode) -> None:
         label="Middle Section Height",
         help="Vertical placement between the start and end sections.",
     )
+
+
+def _add_controls(parent: hou.SopNode) -> hou.SopNode:
+    control = parent.createNode("null", "CONTROL")
+    add_float_parm(
+        control,
+        "membrane_ratio",
+        1,
+        0.035,
+        (0.0, None),
+        label="Membrane Width",
+        help="Shared prosoma setting. Each region applies it against its own local membrane scale.",
+    )
+    return control
