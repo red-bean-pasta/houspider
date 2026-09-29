@@ -1,8 +1,7 @@
 import hou
 
 from houkit.noder import (
-    add_fuse,
-    add_merge,
+    add_merge_fuse,
     add_mirror,
     add_output,
     add_reloadable_subnet,
@@ -37,8 +36,7 @@ def build(prosoma: hou.SopNode, base: hou.SopNode) -> hou.SopNode:
     mirrored = add_mirror(dorsal, "left_mirror", regions, (1, 0, 0), True, False)
     faces = sopify(dorsal, mirrored, rename_left_ids_node)
 
-    merged = add_merge(dorsal, "merge_base_rim", base_rim, faces)
-    fused = add_fuse(dorsal, "fuse_base_rim", merged)
+    fused = add_merge_fuse(dorsal, "merge_fuse_base_rim", base_rim, faces)
     cleaned = sopify_chain(
         dorsal,
         fused,

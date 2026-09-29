@@ -2,7 +2,7 @@ import hou
 
 from houkit.noder import (
     add_fuse,
-    add_merge,
+    add_merge_fuse,
     add_mirror,
     add_output,
     add_reloadable_subnet,
@@ -58,8 +58,7 @@ def build(prosoma: hou.SopNode, source: hou.SopNode) -> hou.SopNode:
     renamed = sopify(chelicerae, mirrored, topology.rename_left_ids)
 
     fuse_mirrors = add_fuse(chelicerae, "fuse_mirrors", renamed)
-    all_merge = add_merge(chelicerae, "merge_dorsal_and_chelicerae", chelicerae.indirectInputs()[0], fuse_mirrors)
-    all_fuse = add_fuse(chelicerae, "fuse_dorsal_and_chelicerae", all_merge)
+    all_fuse = add_merge_fuse(chelicerae, "merge_fuse_dorsal_and_chelicerae", chelicerae.indirectInputs()[0], fuse_mirrors)
     deduplicated = sopify(chelicerae, all_fuse, topology.deduplicate_base_faces)
 
     add_output(chelicerae, "OUT_CHELICERAE", deduplicated)

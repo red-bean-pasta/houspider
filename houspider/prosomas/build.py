@@ -2,8 +2,7 @@ import hou
 
 from ..bases import attributes as base_attributes
 from houkit.noder import (
-    add_fuse,
-    add_merge,
+    add_merge_fuse,
     add_output,
     add_recalculate_normal,
     add_reloadable_subnet,
@@ -26,13 +25,11 @@ def build(spider: hou.OpNode) -> hou.SopNode:
     sternum = build_sternum(prosoma)
     base = build_base(prosoma, sternum)
 
-    s_c_merge = add_merge(prosoma, "merge_sternum_and_coxa", base, sternum)
-    s_c_fuse = add_fuse(prosoma, "fuse_sternum_and_coxa", s_c_merge)
+    s_c_fuse = add_merge_fuse(prosoma, "merge_fuse_sternum_and_coxa", base, sternum)
 
     dorsal = build_dorsal(prosoma, s_c_fuse)
 
-    b_d_merge = add_merge(prosoma, "merge_base_and_dorsal", s_c_fuse, dorsal)
-    b_d_fuse = add_fuse(prosoma, "fuse_base_and_dorsal", b_d_merge)
+    b_d_fuse = add_merge_fuse(prosoma, "merge_fuse_base_and_dorsal", s_c_fuse, dorsal)
 
     mouth = build_mouth(prosoma, b_d_fuse)
     chelicerae = build_chelicerae(prosoma, mouth)

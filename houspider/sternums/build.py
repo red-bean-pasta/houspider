@@ -1,8 +1,7 @@
 import hou
 
 from houkit.noder import (
-    add_fuse,
-    add_merge,
+    add_merge_fuse,
     add_mirror,
     add_output,
     add_reloadable_subnet,
@@ -25,8 +24,7 @@ def build(prosoma: hou.SopNode) -> hou.SopNode:
 
     spine = sopify(sternum, point_ids, topology.add_center_spine)
 
-    merge = add_merge(sternum, "merge_boundary_and_spine", point_ids, spine)
-    fuse = add_fuse(sternum, "fuse_center_points", merge)
+    fuse = add_merge_fuse(sternum, "merge_fuse_boundary_and_spine", point_ids, spine)
 
     buffered = sopify_chain(
         sternum,

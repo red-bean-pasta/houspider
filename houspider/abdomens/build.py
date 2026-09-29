@@ -1,8 +1,8 @@
 import hou
 
 from houkit.noder import (
-    add_fuse,
     add_merge,
+    add_merge_fuse,
     add_mirror,
     add_output,
     add_recalculate_normal,
@@ -25,8 +25,7 @@ def build(spider_node: hou.OpNode, prosoma: hou.SopNode) -> hou.SopNode:
     width_frame = sopify(abdomen, prosoma_info, topology.add_width_frame)
     height_frame = sopify(abdomen, prosoma_info, topology.add_height_frame)
 
-    merged = add_merge(abdomen, "merge_frames", width_frame, height_frame)
-    fused = add_fuse(abdomen, "fuse_frames", merged)
+    fused = add_merge_fuse(abdomen, "merge_fuse_frames", width_frame, height_frame)
     lower_middle_frame = sopify_chain(abdomen, fused, (topology.add_upper_middle_frame, topology.add_lower_middle_frame))
     right_side_faces = sopify(abdomen, lower_middle_frame, topology.fill_right_side_faces)
 

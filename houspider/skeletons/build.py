@@ -3,7 +3,7 @@ from pathlib import Path
 
 import hou
 
-from houkit.noder import add_fuse, add_merge, add_output, add_reloadable_subnet, sopify
+from houkit.noder import add_merge_fuse, add_output, add_reloadable_subnet, sopify
 from ..attributes import GlobalAttrib
 from . import skinning, topology
 from .attributes import LegJoint
@@ -25,8 +25,7 @@ def build(
     legs_skel = sopify(skeleton, source, topology.build_leg_skeletons)
     pedipalps_skel = sopify(skeleton, source, topology.build_pedipalps_skeleton)
 
-    merged = add_merge(skeleton, "merge_skeletons", body_skel, legs_skel, pedipalps_skel)
-    fused = add_fuse(skeleton, "fuse_root", merged)
+    fused = add_merge_fuse(skeleton, "merge_fuse_skeletons", body_skel, legs_skel, pedipalps_skel)
 
     rig_doctor = _add_rig_doctor(skeleton, "rig_doctor", fused)
     tagged = sopify(skeleton, rig_doctor, topology.add_ik_tags)
