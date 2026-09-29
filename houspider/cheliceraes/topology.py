@@ -1,6 +1,6 @@
 import hou
 
-from ..heads.attributes import headbasesupport, headchelicerae
+from ..dorsals.attributes import dorsalbasesupport, dorsalchelicerae
 from ..helper import rename_left_ids as rename_left_ids_geometry
 
 # noinspection PyUnusedImports
@@ -32,7 +32,7 @@ from .support import (
     merge_membrane_curves,
     adjust_start_membrane_curve,
     adjust_right_membrane_width,
-    adjust_head_chelicerae_depth,
+    adjust_dorsal_chelicerae_depth,
     inset_chelicerae_support_loop,
     add_start_membrane_support_loops,
     add_start_section_support_loops,
@@ -48,16 +48,16 @@ def deduplicate_base_faces(node: hou.SopNode) -> None:
     base_id_sets = []
     for sign in (1, -1):
         base_id_sets.append({
-            headchelicerae(0),
-            headchelicerae(sign * 1),
-            headbasesupport(headchelicerae(sign * 1)),
-            headbasesupport(headchelicerae(0)),
+            dorsalchelicerae(0),
+            dorsalchelicerae(sign * 1),
+            dorsalbasesupport(dorsalchelicerae(sign * 1)),
+            dorsalbasesupport(dorsalchelicerae(0)),
         })
         base_id_sets.append({
-            headchelicerae(sign * 1),
-            headchelicerae(sign * 2),
-            headbasesupport(headchelicerae(sign * 2)),
-            headbasesupport(headchelicerae(sign * 1)),
+            dorsalchelicerae(sign * 1),
+            dorsalchelicerae(sign * 2),
+            dorsalbasesupport(dorsalchelicerae(sign * 2)),
+            dorsalbasesupport(dorsalchelicerae(sign * 1)),
         })
 
     duplicate_prims = [

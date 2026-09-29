@@ -4,23 +4,23 @@ from ..helper import affix_id
 
 
 class ID(StrEnum):
-    CEPHAPEDICELUPPER = auto()
-    CEPHAPEDICELLOWER = auto()
-    CEPHAPEDICELRIGHT = auto()
-    CEPHAPEDICELLEFT = auto()
+    PROSOMAPEDICELUPPER = auto()
+    PROSOMAPEDICELLOWER = auto()
+    PROSOMAPEDICELRIGHT = auto()
+    PROSOMAPEDICELLEFT = auto()
 
 
-def cephapedicelupper(*i: int | str) -> str:
-    return affix_id(ID.CEPHAPEDICELUPPER, *i)
+def prosomapedicelupper(*i: int | str) -> str:
+    return affix_id(ID.PROSOMAPEDICELUPPER, *i)
 
 
-def cephapedicellower(*i: int | str) -> str:
-    return affix_id(ID.CEPHAPEDICELLOWER, *i)
+def prosomapedicellower(*i: int | str) -> str:
+    return affix_id(ID.PROSOMAPEDICELLOWER, *i)
 
 
-def cephapedicelright(*i: int | str) -> str:
-    return affix_id(ID.CEPHAPEDICELRIGHT, *i)
+def prosomapedicelright(*i: int | str) -> str:
+    return affix_id(ID.PROSOMAPEDICELRIGHT, *i)
 
 
-def cephapedicelleft(*i: int | str) -> str:
-    return affix_id(ID.CEPHAPEDICELLEFT, *i)
+def prosomapedicelleft(*i: int | str) -> str:
+    return affix_id(ID.PROSOMAPEDICELLEFT, *i)

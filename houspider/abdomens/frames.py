@@ -18,7 +18,7 @@ from .attributes import (
 )
 
 
-def prepare_cephalothorax_info(node: hou.SopNode) -> None:
+def prepare_prosoma_info(node: hou.SopNode) -> None:
     geo = node.geometry()
     bbox = geo.boundingBox()
     size = bbox.sizevec()
@@ -28,27 +28,27 @@ def prepare_cephalothorax_info(node: hou.SopNode) -> None:
     y_min = bbox.minvec().y()
 
     points = points_by_id(geo)
-    upper = points.get(spider_attributes.cephapedicelupper())
-    assert upper is not None, f"Expected {spider_attributes.cephapedicelupper()!r} in cephalothorax"
-    right = points.get(spider_attributes.cephapedicelright())
-    assert right is not None, f"Expected {spider_attributes.cephapedicelright()!r} in cephalothorax"
-    lower = points.get(spider_attributes.cephapedicellower())
-    assert lower is not None, f"Expected {spider_attributes.cephapedicellower()!r} in cephalothorax"
+    upper = points.get(spider_attributes.prosomapedicelupper())
+    assert upper is not None, f"Expected {spider_attributes.prosomapedicelupper()!r} in prosoma"
+    right = points.get(spider_attributes.prosomapedicelright())
+    assert right is not None, f"Expected {spider_attributes.prosomapedicelright()!r} in prosoma"
+    lower = points.get(spider_attributes.prosomapedicellower())
+    assert lower is not None, f"Expected {spider_attributes.prosomapedicellower()!r} in prosoma"
 
     origin_y = 0.0
     upper_span = y_max - origin_y
     lower_span = origin_y - y_min
-    assert lower_span > 1e-6, "Expected positive cephalothorax lower span"
+    assert lower_span > 1e-6, "Expected positive prosoma lower span"
     upper_lower_ratio = upper_span / lower_span
 
     tmp_pedicel_length = right.position().x() - upper.position().x()
     tmp_pedicel_height = upper.position().y() - origin_y
 
-    add_global_attrib(geo, "tmp_cepha_size", (0.0, 0.0, 0.0))
-    geo.setGlobalAttribValue("tmp_cepha_size", (cw, ch, cl))
+    add_global_attrib(geo, "tmp_prosoma_size", (0.0, 0.0, 0.0))
+    geo.setGlobalAttribValue("tmp_prosoma_size", (cw, ch, cl))
 
-    add_global_attrib(geo, "tmp_cepha_upper_lower_ratio", 0.0)
-    geo.setGlobalAttribValue("tmp_cepha_upper_lower_ratio", upper_lower_ratio)
+    add_global_attrib(geo, "tmp_prosoma_upper_lower_ratio", 0.0)
+    geo.setGlobalAttribValue("tmp_prosoma_upper_lower_ratio", upper_lower_ratio)
 
     add_global_attrib(geo, "tmp_pedicel_length", 0.0)
     geo.setGlobalAttribValue("tmp_pedicel_length", tmp_pedicel_length)
@@ -61,9 +61,9 @@ def add_width_frame(node: hou.SopNode) -> None:
     geo = node.geometry()
     parent = get_parent(node)
 
-    tmp_cepha_size = geo.attribValue("tmp_cepha_size")
-    assert tmp_cepha_size is not None, "Expected tmp_cepha_size attribute"
-    cw, _, cl = tmp_cepha_size
+    tmp_prosoma_size = geo.attribValue("tmp_prosoma_size")
+    assert tmp_prosoma_size is not None, "Expected tmp_prosoma_size attribute"
+    cw, _, cl = tmp_prosoma_size
 
     tmp_pedicel_length = geo.attribValue("tmp_pedicel_length")
     assert tmp_pedicel_length is not None, "Expected tmp_pedicel_length attribute"
@@ -100,12 +100,12 @@ def add_height_frame(node: hou.SopNode) -> None:
     geo = node.geometry()
     parent = get_parent(node)
 
-    tmp_cepha_size = geo.attribValue("tmp_cepha_size")
-    assert tmp_cepha_size is not None, "Expected tmp_cepha_size attribute"
-    _, ch, cl = tmp_cepha_size
+    tmp_prosoma_size = geo.attribValue("tmp_prosoma_size")
+    assert tmp_prosoma_size is not None, "Expected tmp_prosoma_size attribute"
+    _, ch, cl = tmp_prosoma_size
 
-    upper_lower_ratio = geo.attribValue("tmp_cepha_upper_lower_ratio")
-    assert upper_lower_ratio is not None, "Expected tmp_cepha_upper_lower_ratio attribute"
+    upper_lower_ratio = geo.attribValue("tmp_prosoma_upper_lower_ratio")
+    assert upper_lower_ratio is not None, "Expected tmp_prosoma_upper_lower_ratio attribute"
 
     tmp_pedicel_height = geo.attribValue("tmp_pedicel_height")
     assert tmp_pedicel_height is not None, "Expected tmp_pedicel_height attribute"

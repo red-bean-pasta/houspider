@@ -5,7 +5,7 @@ from houkit.parameterizer import get_float_parm, get_parms
 from houkit.topology import fill_face, get_prim_centroid
 from .attributes import Region, cheliceraemembrane, cheliceraestart, cheliceraestartmembranesupport
 from ..bases import attributes as base_attributes
-from ..heads.attributes import headchelicerae
+from ..dorsals.attributes import dorsalchelicerae
 from ..helper import (
     add_id_point,
     deduplicate_id_attr,
@@ -23,7 +23,7 @@ def inset_flaps(node: hou.SopNode) -> None:
     lower, upper = points_from_geo(
         geo,
         base_attributes.basesternum(0),
-        headchelicerae(0),
+        dorsalchelicerae(0),
     )
     dist = ratio * lower.position().distanceTo(upper.position())
 
@@ -95,7 +95,7 @@ def add_start_membrane(node: hou.SopNode) -> None:
     b0, u0, m6 = points_from_geo(
         geo,
         base_attributes.basesternum(0),
-        headchelicerae(0),
+        dorsalchelicerae(0),
         cheliceraemembrane(6),
     )
     membrane_points = points_from_geo(
@@ -137,7 +137,7 @@ def inset_start_membrane(node: hou.SopNode) -> None:
     lower, upper = points_from_geo(
         geo,
         base_attributes.basesternum(0),
-        headchelicerae(0),
+        dorsalchelicerae(0),
     )
     dist = ratio * lower.position().distanceTo(upper.position())
 

@@ -13,8 +13,8 @@ from ..helper import sopify_chain
 from . import topology
 
 
-def build(cephalothorax: hou.SopNode, source: hou.SopNode) -> hou.SopNode:
-    chelicerae = add_reloadable_subnet(cephalothorax, "chelicerae")
+def build(prosoma: hou.SopNode, source: hou.SopNode) -> hou.SopNode:
+    chelicerae = add_reloadable_subnet(prosoma, "chelicerae")
     chelicerae.setInput(0, source)
     _add_parameters(chelicerae)
 
@@ -47,7 +47,7 @@ def build(cephalothorax: hou.SopNode, source: hou.SopNode) -> hou.SopNode:
         chelicerae,
         adjusted_right,
         (
-            topology.adjust_head_chelicerae_depth,
+            topology.adjust_dorsal_chelicerae_depth,
             topology.inset_chelicerae_support_loop,
             topology.add_start_membrane_support_loops,
             topology.add_start_section_support_loops,
@@ -58,8 +58,8 @@ def build(cephalothorax: hou.SopNode, source: hou.SopNode) -> hou.SopNode:
     renamed = sopify(chelicerae, mirrored, topology.rename_left_ids)
 
     fuse_mirrors = add_fuse(chelicerae, "fuse_mirrors", renamed)
-    all_merge = add_merge(chelicerae, "merge_head_and_chelicerae", chelicerae.indirectInputs()[0], fuse_mirrors)
-    all_fuse = add_fuse(chelicerae, "fuse_head_and_chelicerae", all_merge)
+    all_merge = add_merge(chelicerae, "merge_dorsal_and_chelicerae", chelicerae.indirectInputs()[0], fuse_mirrors)
+    all_fuse = add_fuse(chelicerae, "fuse_dorsal_and_chelicerae", all_merge)
     deduplicated = sopify(chelicerae, all_fuse, topology.deduplicate_base_faces)
 
     add_output(chelicerae, "OUT_CHELICERAE", deduplicated)
@@ -75,7 +75,7 @@ def _add_parameters(chelicerae: hou.SopNode) -> None:
         0.035,
         (0.0, None),
         label="Membrane Width",
-        help="Shared cephalothorax setting. Each region applies it against its own local membrane scale.",
+        help="Shared prosoma setting. Each region applies it against its own local membrane scale.",
     )
     add_heading(
         chelicerae,

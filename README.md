@@ -74,14 +74,14 @@ The complete handle set is generated in Houdini from the builder modules. The co
 | `coxa_flap_extension_ratio` | `1.63` | Outward coxa-flap reach relative to sternum rim-edge length. |
 | `coxa_flap_rise_angle` | `12` | Coxa-flap rise angle in degrees. |
 
-### Head
+### Dorsal
 
 | Parameter | Default | Description |
 | --- | ---: | --- |
-| `height_ratio` | `0.375` | Head top height relative to the base-to-chelicerae span. |
-| `top_width_length_ratios` | `(1.0, 0.4)` | Head top width and front-to-back length/flatness. |
+| `height_ratio` | `0.375` | Dorsal top height relative to the base-to-chelicerae span. |
+| `top_width_length_ratios` | `(1.0, 0.4)` | Dorsal top width and front-to-back length/flatness. |
 | `top_face_offset_ratio` | `0.0` | Lengthwise offset of the top face. |
-| `top_support_loop_ratios` | `(0.2, 0.5)` | Forward and rear placement of the top support loop. Larger values make the head rounder. |
+| `top_support_loop_ratios` | `(0.2, 0.5)` | Forward and rear placement of the top support loop. Larger values make the dorsal rounder. |
 | `chelicerae_height_ratio` | `0.35` | Height of the upper chelicerae line relative to the base. |
 | `lip_extrusion_ratio` | `(5.0, 1.0)` | Lengthwise and vertical lip extrusion. |
 
@@ -89,7 +89,7 @@ The complete handle set is generated in Houdini from the builder modules. The co
 
 | Parameter | Default | Description |
 | --- | ---: | --- |
-| `size_ratios` | `(1.2, 1.0, 1.2)` | Abdomen width, height, and length relative to the cephalothorax. |
+| `size_ratios` | `(1.2, 1.0, 1.2)` | Abdomen width, height, and length relative to the prosoma. |
 | `width_hold_ratios` | `(0.1, 0.6)` | Start and end of the constant-width region along the abdomen. |
 | `end_size_ratio` | `0.2` | Terminal abdomen width and height relative to its maximum size. This represents the spinnet. |
 

@@ -13,20 +13,20 @@ from ..helper import rename_left_ids_node, sopify_chain
 from . import topology
 
 
-def build(cephalothorax: hou.SopNode, base: hou.SopNode) -> hou.SopNode:
-    head = add_reloadable_subnet(cephalothorax, "head")
-    head.setInput(0, base)
-    _add_parameters(head)
+def build(prosoma: hou.SopNode, base: hou.SopNode) -> hou.SopNode:
+    dorsal = add_reloadable_subnet(prosoma, "dorsal")
+    dorsal.setInput(0, base)
+    _add_parameters(dorsal)
 
-    source = head.indirectInputs()[0]
-    base_rim = sopify(head, source, topology.extract_base_rim)
-    base_points = sopify(head, source, topology.extract_work_base)
+    source = dorsal.indirectInputs()[0]
+    base_rim = sopify(dorsal, source, topology.extract_base_rim)
+    base_points = sopify(dorsal, source, topology.extract_work_base)
     regions = sopify_chain(
-        head,
+        dorsal,
         base_points,
         (
             topology.add_corners_half,
-            topology.add_head_dent,
+            topology.add_dorsal_dent,
             topology.curve_lip,
             topology.fill_back_loop_faces,
             topology.fill_support_loop_faces,
@@ -34,24 +34,24 @@ def build(cephalothorax: hou.SopNode, base: hou.SopNode) -> hou.SopNode:
             topology.add_side_regions,
         ),
     )
-    mirrored = add_mirror(head, "left_mirror", regions, (1, 0, 0), True, False)
-    faces = sopify(head, mirrored, rename_left_ids_node)
+    mirrored = add_mirror(dorsal, "left_mirror", regions, (1, 0, 0), True, False)
+    faces = sopify(dorsal, mirrored, rename_left_ids_node)
 
-    merged = add_merge(head, "merge_base_rim", base_rim, faces)
-    fused = add_fuse(head, "fuse_base_rim", merged)
+    merged = add_merge(dorsal, "merge_base_rim", base_rim, faces)
+    fused = add_fuse(dorsal, "fuse_base_rim", merged)
     cleaned = sopify_chain(
-        head,
+        dorsal,
         fused,
         (topology.inset_base_support_loop, topology.extrude_lip, topology.cleanup),
     )
-    add_output(head, "OUT_HEAD", cleaned)
-    head.layoutChildren()
-    return head
+    add_output(dorsal, "OUT_DORSAL", cleaned)
+    dorsal.layoutChildren()
+    return dorsal
 
 
-def _add_parameters(head: hou.SopNode) -> None:
+def _add_parameters(dorsal: hou.SopNode) -> None:
     add_float_parm(
-        head,
+        dorsal,
         "height_ratio",
         1,
         0.375,
@@ -60,7 +60,7 @@ def _add_parameters(head: hou.SopNode) -> None:
         help="Top-face height relative to the base-to-chelicerae reference span.",
     )
     add_float_parm(
-        head,
+        dorsal,
         "top_width_length_ratios",
         2,
         (1.0, 0.4),
@@ -70,7 +70,7 @@ def _add_parameters(head: hou.SopNode) -> None:
         help="X sets top width. Y sets the top face’s front-to-back length and flatness.",
     )
     add_float_parm(
-        head,
+        dorsal,
         "top_face_offset_ratio",
         1,
         0.0,
@@ -78,7 +78,7 @@ def _add_parameters(head: hou.SopNode) -> None:
         help="Lengthwise skew of the top face relative to base length.",
     )
     add_float_parm(
-        head,
+        dorsal,
         "top_support_loop_ratios",
         2,
         (0.2, 0.5),
@@ -87,7 +87,7 @@ def _add_parameters(head: hou.SopNode) -> None:
         help="X adjusts the forward portion; Y adjusts the rear portion between the top face and base-side loop.",
     )
     add_float_parm(
-        head,
+        dorsal,
         "chelicerae_height_ratio",
         1,
         0.35,
@@ -96,7 +96,7 @@ def _add_parameters(head: hou.SopNode) -> None:
         help="Vertical placement of the upper chelicerae line relative to the base.",
     )
     add_float_parm(
-        head,
+        dorsal,
         "lip_extrusion_ratio",
         2,
         (5.0, 1.0),
@@ -106,11 +106,11 @@ def _add_parameters(head: hou.SopNode) -> None:
         help="X is lengthwise extrusion; Y is vertical extrusion.",
     )
     add_float_parm(
-        head,
+        dorsal,
         "membrane_ratio",
         1,
         0.035,
         (0.0, None),
         label="Membrane Width",
-        help="Shared cephalothorax setting. Each region applies it against its own local membrane scale.",
+        help="Shared prosoma setting. Each region applies it against its own local membrane scale.",
     )

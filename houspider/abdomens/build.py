@@ -14,16 +14,16 @@ from ..helper import rename_left_ids_node, sopify_chain
 from . import topology
 
 
-def build(spider_node: hou.OpNode, cephalothorax: hou.SopNode) -> hou.SopNode:
+def build(spider_node: hou.OpNode, prosoma: hou.SopNode) -> hou.SopNode:
     abdomen = add_reloadable_subnet(spider_node, "abdomen")
-    abdomen.setInput(0, cephalothorax)
+    abdomen.setInput(0, prosoma)
     _add_parameters(abdomen)
     _add_controls(abdomen)
 
     source = abdomen.indirectInputs()[0]
-    cepha_info = sopify(abdomen, source, topology.prepare_cephalothorax_info)
-    width_frame = sopify(abdomen, cepha_info, topology.add_width_frame)
-    height_frame = sopify(abdomen, cepha_info, topology.add_height_frame)
+    prosoma_info = sopify(abdomen, source, topology.prepare_prosoma_info)
+    width_frame = sopify(abdomen, prosoma_info, topology.add_width_frame)
+    height_frame = sopify(abdomen, prosoma_info, topology.add_height_frame)
 
     merged = add_merge(abdomen, "merge_frames", width_frame, height_frame)
     fused = add_fuse(abdomen, "fuse_frames", merged)
@@ -52,7 +52,7 @@ def _add_parameters(abdomen: hou.SopNode) -> None:
         (1.2, 1.0, 1.2),
         (0.0, None),
         label="Width / Height / Length",
-        help="X, Y, and Z scale abdomen width, height, and length against the cephalothorax.",
+        help="X, Y, and Z scale abdomen width, height, and length against the prosoma.",
     )
     add_float_parm(
         abdomen,

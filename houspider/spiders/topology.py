@@ -1,6 +1,6 @@
 # noinspection PyUnusedImports
-from .cepha_pedicel import (
-    open_cepha_pedicel,
+from .prosoma_pedicel import (
+    open_prosoma_pedicel,
 )
 # noinspection PyUnusedImports
 from .abdomen_pedicel import (

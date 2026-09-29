@@ -6,7 +6,7 @@ from .base import (
 )
 # noinspection PyUnusedImports
 from .front import (
-    add_head_dent,
+    add_dorsal_dent,
     curve_lip,
     fill_back_loop_faces,
     fill_support_loop_faces,

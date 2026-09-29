@@ -9,27 +9,27 @@ from houkit.noder import (
 )
 from houkit.nodes.sops import add_output
 from ..abdomens.build import build as build_abdomen
-from ..cephalothoraxes.build import build as build_cephalothorax
 from ..legs.build import build as build_legs
 from ..pedicels.build import build as build_pedicel
 from ..pedipalps.build import build as build_pedipalps
+from ..prosomas.build import build as build_prosoma
 from . import topology
 
 
 def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
     spider = _add_spider(parent, name)
 
-    cephalothorax = build_cephalothorax(spider)
+    prosoma = build_prosoma(spider)
 
-    abdomen_node = build_abdomen(spider, cephalothorax)
+    abdomen_node = build_abdomen(spider, prosoma)
 
     opened_abdomen = sopify(spider, abdomen_node, topology.open_abdomen_pedicel)
-    merged_c_a = add_merge(spider, "merge_cephalothorax_and_abdomen", cephalothorax, opened_abdomen)
+    merged_p_a = add_merge(spider, "merge_prosoma_and_abdomen", prosoma, opened_abdomen)
 
-    pedicel = build_pedicel(spider, merged_c_a)
-    merged_ca_p = add_merge(spider, "merge_main_and_pedicel", merged_c_a, pedicel)
-    fused_ca_p = add_fuse(spider, "fuse_main_and_pedicel", merged_ca_p)
-    removed_sockets = sopify(spider, fused_ca_p, topology.remove_coxa_sockets)
+    pedicel = build_pedicel(spider, merged_p_a)
+    merged_pa_p = add_merge(spider, "merge_main_and_pedicel", merged_p_a, pedicel)
+    fused_pa_p = add_fuse(spider, "fuse_main_and_pedicel", merged_pa_p)
+    removed_sockets = sopify(spider, fused_pa_p, topology.remove_coxa_sockets)
 
     legs = build_legs(spider, removed_sockets)
     pedipalps = build_pedipalps(spider, removed_sockets, legs)

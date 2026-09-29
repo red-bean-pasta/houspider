@@ -6,7 +6,7 @@ from houkit.attributer import points_by_attrib
 from houkit.noder import get_parent
 from houkit.parameterizer import get_float_parm
 from houkit.topology import find_prim, loop_cut, merge_points, offset_point, traverse_faces_between_edges
-from ..heads.attributes import headbasesupport, headchelicerae
+from ..dorsals.attributes import dorsalbasesupport, dorsalchelicerae
 from ..helper import (
     deduplicate_id_attr,
     inset_inner_prims,
@@ -142,33 +142,33 @@ def adjust_right_membrane_width(node: hou.SopNode) -> None:
         offset_point(point, bottom_offset)
 
 
-def adjust_head_chelicerae_depth(node: hou.SopNode) -> None:
+def adjust_dorsal_chelicerae_depth(node: hou.SopNode) -> None:
     geo: hou.Geometry = node.geometry()
 
-    # h0: headchelicerae0, hs0: headbasesupport_headchelicerae0
+    # d0: dorsalchelicerae0, ds0: dorsalbasesupport_dorsalchelicerae0
     # c6: cheliceraemembrane6, cs6: cheliceraestartmembranesupport2
-    h0, hs0, c6, cs6 = points_from_geo(
+    d0, ds0, c6, cs6 = points_from_geo(
         geo,
-        headchelicerae(0),
-        headbasesupport(headchelicerae(0)),
+        dorsalchelicerae(0),
+        dorsalbasesupport(dorsalchelicerae(0)),
         cheliceraemembrane(6),
         cheliceraestartmembranesupport(2),
     )
-    for pt in (h0, hs0, c6, cs6):
+    for pt in (d0, ds0, c6, cs6):
         assert abs(pt.position().x()) < 1e-4
 
-    dh = (h0.position() - hs0.position()).normalized()
+    dd = (d0.position() - ds0.position()).normalized()
     dc = (cs6.position() - c6.position()).normalized()
 
-    v0 = h0.position() - c6.position()
+    v0 = d0.position() - c6.position()
     v_perp = (v0 - dc * v0.dot(dc)).normalized()
     angle = math.radians(10)
     d_target = dc * math.cos(angle) + v_perp * math.sin(angle)
 
-    denom = (d_target.cross(dh)).x()
-    assert abs(denom) > 1e-6, "Target direction and head direction are nearly parallel"
+    denom = (d_target.cross(dd)).x()
+    assert abs(denom) > 1e-6, "Target direction and dorsal direction are nearly parallel"
     t = (v0.cross(d_target)).x() / denom
-    offset_point(h0, dh * t)
+    offset_point(d0, dd * t)
 
 
 def inset_chelicerae_support_loop(node: hou.SopNode) -> None:
@@ -194,25 +194,25 @@ def _get_chelicerae_support_strip_prims(geo: hou.Geometry) -> list[hou.Prim]:
     # Boundary vertices along the upper-medial edge (#2) of the chelicera tube
     medial_upper_points = points_from_geo(
         geo,
-        headbasesupport(headchelicerae(0)),
+        dorsalbasesupport(dorsalchelicerae(0)),
         cheliceraeend(2),
     )
     # Opposing vertices along the upper-middle loop cut (#uppermiddle_1)
     upper_middle_points = points_from_geo(
         geo,
-        headbasesupport(headchelicerae(1)),
+        dorsalbasesupport(dorsalchelicerae(1)),
         upper_middle(cheliceraeend, 1),
     )
     # Boundary vertices along the upper-lateral edge (#3) of the chelicera tube
     lateral_upper_points = points_from_geo(
         geo,
-        headbasesupport(headchelicerae(2)),
+        dorsalbasesupport(dorsalchelicerae(2)),
         cheliceraeend(3),
     )
     side_points = points_from_geo(
         geo,
-        headchelicerae(0),
-        headchelicerae(2),
+        dorsalchelicerae(0),
+        dorsalchelicerae(2),
     )
     # Form the full upper quad strip (medial and lateral halves)
     left_prims = [
@@ -247,8 +247,8 @@ def _adjust_chelicerae_support_loop(node: hou.SopNode) -> None:
 def _adjust_right_chelicerae_support_points(points_by_id: dict[str, set[hou.Point]]) -> None:
     # For the right half support points, move them along 1/2 towards the upper middle line
     sections = (
-        (headbasesupport(headchelicerae(2)), headbasesupport(headchelicerae(1))),
-        (headchelicerae(2), headchelicerae(1)),
+        (dorsalbasesupport(dorsalchelicerae(2)), dorsalbasesupport(dorsalchelicerae(1))),
+        (dorsalchelicerae(2), dorsalchelicerae(1)),
         (cheliceraemembrane(4), cheliceraemembrane(5)),
         (cheliceraestartmembranesupport(3), upper_middle(cheliceraestartmembranesupport, 1)),
         (cheliceraestart(3), upper_middle(cheliceraestart, 1)),
@@ -288,10 +288,10 @@ def _adjust_right_chelicerae_membrane_points(points_by_id: dict[str, set[hou.Poi
 
 
 def _adjust_left_chelicerae_support_points(points_by_id: dict[str, set[hou.Point]]) -> None:
-    # For the left half support points, new cuts at headbasesupport and headchelicerae are moved to 1/2
+    # For the left half support points, new cuts at dorsalbasesupport and dorsalchelicerae are moved to 1/2
     sections = (
-        (headbasesupport(headchelicerae(0)), headbasesupport(headchelicerae(1)), 0.0),
-        (headchelicerae(0), headchelicerae(1), 0.0),
+        (dorsalbasesupport(dorsalchelicerae(0)), dorsalbasesupport(dorsalchelicerae(1)), 0.0),
+        (dorsalchelicerae(0), dorsalchelicerae(1), 0.0),
         (cheliceraemembrane(6), cheliceraemembrane(5), 0.0),
         (cheliceraestartmembranesupport(2), upper_middle(cheliceraestartmembranesupport, 1), 0.0),
         (cheliceraestart(2), upper_middle(cheliceraestart, 1), 0.0),

@@ -34,9 +34,9 @@ def pedicelmiddlelower(*i: int | str) -> str:
     return affix_id(ID.PEDICELMIDDLELOWER, *i)
 
 
-def build(spider_node: hou.OpNode, merged_cepha_and_abdomen: hou.SopNode) -> hou.SopNode:
+def build(spider_node: hou.OpNode, merged_prosoma_and_abdomen: hou.SopNode) -> hou.SopNode:
     pedicel = add_reloadable_subnet(spider_node, "pedicel")
-    pedicel.setInput(0, merged_cepha_and_abdomen)
+    pedicel.setInput(0, merged_prosoma_and_abdomen)
 
     source = pedicel.indirectInputs()[0]
     needed_points = sopify(pedicel, source, _extract_needed_points)
@@ -55,10 +55,10 @@ def _extract_needed_points(node: hou.SopNode) -> None:
     points = points_by_id(geo)
 
     needed_ids = (
-        spider_attributes.cephapedicelupper(),
-        spider_attributes.cephapedicelright(),
-        spider_attributes.cephapedicelleft(),
-        spider_attributes.cephapedicellower(),
+        spider_attributes.prosomapedicelupper(),
+        spider_attributes.prosomapedicelright(),
+        spider_attributes.prosomapedicelleft(),
+        spider_attributes.prosomapedicellower(),
         abdomen_attributes.abdomenverticalrim(1),
         abdomen_attributes.abdomenverticalrim(-1),
         abdomen_attributes.abdomenhorizontalrim(1),
@@ -96,10 +96,10 @@ def _connect_pedicel(node: hou.SopNode) -> None:
         abdomensidelower_neg1,
     ) = points_from_geo(
         geo,
-        spider_attributes.cephapedicelupper(),
-        spider_attributes.cephapedicelright(),
-        spider_attributes.cephapedicelleft(),
-        spider_attributes.cephapedicellower(),
+        spider_attributes.prosomapedicelupper(),
+        spider_attributes.prosomapedicelright(),
+        spider_attributes.prosomapedicelleft(),
+        spider_attributes.prosomapedicellower(),
         abdomen_attributes.abdomenverticalrim(1),
         abdomen_attributes.abdomenverticalrim(-1),
         abdomen_attributes.abdomenhorizontalrim(1),

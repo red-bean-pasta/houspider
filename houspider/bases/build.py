@@ -12,8 +12,8 @@ from ..sternums.build import build as build_sternum
 from ..helper import sopify_chain
 
 
-def build(cephalothorax: hou.SopNode) -> hou.SopNode:
-    base = add_reloadable_subnet(cephalothorax, "base")
+def build(prosoma: hou.SopNode) -> hou.SopNode:
+    base = add_reloadable_subnet(prosoma, "base")
     _add_parameters(base)
 
     sternum_node = build_sternum(base)

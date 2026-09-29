@@ -13,12 +13,12 @@ from ..helper import sopify_chain
 from . import topology
 
 
-def build(cephalothorax: hou.SopNode) -> hou.SopNode:
-    sternum = add_reloadable_subnet(cephalothorax, "sternum")
+def build(prosoma: hou.SopNode) -> hou.SopNode:
+    sternum = add_reloadable_subnet(prosoma, "sternum")
     _add_parameters(sternum)
     _add_controls(sternum)
 
-    midpoints = sopify_chain(sternum, None, (topology.left_half, topology.add_midpoints))
+    midpoints = sopify_chain(sternum, None, (topology.left_half, topology.add_midpoints))\
 
     mirror = add_mirror(sternum, "right_mirror", midpoints, (1, 0, 0), True, False)
     point_ids = sopify(sternum, mirror, topology.add_point_ids)
@@ -102,7 +102,7 @@ def _add_parameters(sternum: hou.SopNode) -> None:
         0.02,
         (0.0, None),
         label="Membrane Width",
-        help="Shared cephalothorax setting. Each region applies it against its own local membrane scale.",
+        help="Shared prosoma setting. Each region applies it against its own local membrane scale.",
     )
 
 

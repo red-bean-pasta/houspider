@@ -15,7 +15,7 @@ from .attributes import (
 
 # noinspection PyUnusedImports
 from .frames import (
-    prepare_cephalothorax_info,
+    prepare_prosoma_info,
     add_width_frame,
     add_height_frame,
     add_upper_middle_frame,
@@ -81,5 +81,5 @@ def add_regions(node: hou.SopNode) -> None:
 def cleanup_temp_attributes(node: hou.SopNode) -> None:
     remove_attribs(
         node.geometry(),
-        global_attributes=("tmp_cepha_size", "tmp_cepha_upper_lower_ratio", "tmp_pedicel_length", "tmp_pedicel_height"),
+        global_attributes=("tmp_prosoma_size", "tmp_prosoma_upper_lower_ratio", "tmp_pedicel_length", "tmp_pedicel_height"),
     )

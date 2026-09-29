@@ -21,7 +21,7 @@ At the end of most tasks, you need to rerun `hython test_builder.py` and reinspe
 You don't need to over-think. If the task is simple, you can simply do it. It's also encouraged to adopt the "inspect code + write code + try + error + debug" than "inspect files". You don't need to be 100% confident before making changes. Do not walk through and make sure of everything before attempting the task. That results in huge resource waste and is not acceptable. 
 Many of the time, your operations are prompted to user by ACP or MCP. You can always comment the intention, so that the user has a better understanding on what stage we are at, if your direction is wrong or what the code is for.
 You can always actively prompt for clarification, answer for multiple choices etc. The user may not write the best prompt, clarify their need enough and may have typos and reference errors, you can always point them out and ask for clarification. 
-For file editing, prefer ACP tool `client_edit_file`. It's discouraged to use `apply_patch`, `pycharm_execute_terminal_command` and python's `file.write` because their formatting is hard for user to inspect. 
+For file editing, prefer ACP tool `client_edit_file`. It's discouraged to use `apply_patch`, `pycharm_execute_terminal_command` and python's `file.write` because their formatting is hard for user to inspect. However, for refactoring, MCP tools is preferred.
 You can use `sed` or `head` for file segmentation. But if you don't know the exact position, you can cat the whole file, or identify it first using grep. Do not use sed to "nudge" along the file because the user may get frustrated. You can also combine multiple commands into one to save turns and tokens.
 You can use MCP or `python.read` to read out-of-scope files.
 No Latex Output. Use only MarkDown. LaTex have problem rendering in PyCharm.
@@ -85,7 +85,6 @@ Output the mode at the beginning of every of your response, whether already spec
 - no overengineering
 - break down methods
 - raise on questions
-- prefer ACP tools
 - don't overthink
 - `.aiassistant/tmp/` is your notebook
 - modes like [static pre]
