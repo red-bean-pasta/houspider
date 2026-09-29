@@ -48,4 +48,4 @@ def _propagate_parameters(parent: hou.OpNode) -> None:
     promote_subnets(parent, depth=None, dest_group="Build")
 
     add_folder(parent, "advanced")
-    promote_controls(parent, depth=None, dest_group="Advanced",)
+    promote_controls(parent, depth=None, dest_group="Advanced", create_child_folder=False)
