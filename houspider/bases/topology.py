@@ -257,8 +257,16 @@ def extrude_base_buffer(node: hou.SopNode) -> None:
         for component in outset(list(geo.prims()), dist, use_ratio=False).values()
         for prim in component
     ]
+
     for prim in outer_prims:
         prim.setAttribValue("region", Region.BASEBUFFERMEMBRANE)
+
+    inner_prims = [
+        prim
+        for prim in outer_prims
+        if any(point.stringAttribValue("id").startswith(sternum_attributes.outer_loop_ids()) for point in prim.points())
+    ]
+    geo.deletePrims(inner_prims, keep_points=False)
 
     deduplicate_point_attribs(geo, "id", outer_loop_ids(), keep_first=False)
 

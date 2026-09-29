@@ -16,17 +16,22 @@ from ..cheliceraes.build import build as build_chelicerae
 from ..dorsals.build import build as build_dorsal
 from ..mouths.build import build as build_mouth
 from ..spiders import topology
+from ..sternums.build import build as build_sternum
 
 
 def build(spider: hou.OpNode) -> hou.SopNode:
     prosoma = add_reloadable_subnet(spider, "prosoma")
     _add_parameters(prosoma)
 
-    base = build_base(prosoma)
+    sternum = build_sternum(prosoma)
+    base = build_base(prosoma, sternum)
 
-    dorsal = build_dorsal(prosoma, base)
+    s_c_merge = add_merge(prosoma, "merge_sternum_and_coxa", base, sternum)
+    s_c_fuse = add_fuse(prosoma, "fuse_sternum_and_coxa", s_c_merge)
 
-    b_d_merge = add_merge(prosoma, "merge_base_and_dorsal", base, dorsal)
+    dorsal = build_dorsal(prosoma, s_c_fuse)
+
+    b_d_merge = add_merge(prosoma, "merge_base_and_dorsal", s_c_fuse, dorsal)
     b_d_fuse = add_fuse(prosoma, "fuse_base_and_dorsal", b_d_merge)
 
     mouth = build_mouth(prosoma, b_d_fuse)

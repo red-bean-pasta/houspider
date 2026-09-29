@@ -2,25 +2,24 @@ import hou
 
 from houkit.noder import (
     add_fuse,
-    add_merge,
     add_output,
     add_reloadable_subnet,
 )
 from houkit.parameterizer import add_float_parm
 from . import topology
-from ..sternums.build import build as build_sternum
 from ..helper import sopify_chain
 
 
-def build(prosoma: hou.SopNode) -> hou.SopNode:
+def build(prosoma: hou.SopNode, sternum: hou.SopNode) -> hou.SopNode:
     base = add_reloadable_subnet(prosoma, "base")
+    base.setInput(0, sternum)
     _add_parameters(base)
 
-    sternum_node = build_sternum(base)
+    sternum_source = base.indirectInputs()[0]
 
     flap_regions = sopify_chain(
         base,
-        sternum_node,
+        sternum_source,
         (topology.extract_sternum_rim, topology.build_coxa_flaps, topology.add_flap_regions),
     )
     fuse_flaps = add_fuse(base, "fuse_coxa_flaps", flap_regions)
@@ -49,11 +48,9 @@ def build(prosoma: hou.SopNode) -> hou.SopNode:
         (topology.adjust_mouth, topology.inset_membrane),
     )
 
-    merge = add_merge(base, "merge_sternum_and_coxa", membrane, sternum_node)
-    fuse = add_fuse(base, "fuse_sternum_and_coxa", merge)
     buffered = sopify_chain(
         base,
-        fuse,
+        membrane,
         (topology.extrude_base_buffer, ),
     )
     add_output(base, "OUT_BASE", buffered)
