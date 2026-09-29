@@ -83,3 +83,14 @@ def cleanup_temp_attributes(node: hou.SopNode) -> None:
         node.geometry(),
         global_attributes=("tmp_prosoma_size", "tmp_prosoma_upper_lower_ratio", "tmp_pedicel_length", "tmp_pedicel_height"),
     )
+
+
+def open_abdomen_pedicel(node: hou.SopNode) -> None:
+    geo: hou.Geometry = node.geometry()
+    points = points_by_id(geo)
+    origin_point = points.get(abdomenorigin())
+    assert origin_point is not None, "Expected abdomenorigin point in abdomen"
+    prims = list(origin_point.prims())
+    geo.deletePrims(prims, keep_points=True)
+    if origin_point in geo.points():
+        geo.deletePoints([origin_point])

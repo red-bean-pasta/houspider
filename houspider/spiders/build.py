@@ -23,8 +23,7 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
 
     abdomen_node = build_abdomen(spider, prosoma)
 
-    opened_abdomen = sopify(spider, abdomen_node, topology.open_abdomen_pedicel)
-    merged_p_a = add_merge(spider, "merge_prosoma_and_abdomen", prosoma, opened_abdomen)
+    merged_p_a = add_merge(spider, "merge_prosoma_and_abdomen", prosoma, abdomen_node)
 
     pedicel = build_pedicel(spider, merged_p_a)
     merged_pa_p = add_merge(spider, "merge_main_and_pedicel", merged_p_a, pedicel)

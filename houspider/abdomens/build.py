@@ -39,7 +39,8 @@ def build(spider_node: hou.OpNode, prosoma: hou.SopNode) -> hou.SopNode:
     cleaned = sopify_chain(abdomen, renamed, (topology.add_regions, topology.cleanup_temp_attributes))
 
     recalculate = add_recalculate_normal(abdomen, "recalculate_normals", cleaned)
-    add_output(abdomen, "OUT_ABDOMEN", recalculate)
+    opened = sopify(abdomen, recalculate, topology.open_abdomen_pedicel)
+    add_output(abdomen, "OUT_ABDOMEN", opened)
     abdomen.layoutChildren()
     return abdomen
 
