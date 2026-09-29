@@ -47,10 +47,6 @@ def build(
 
 
 def add_parameters(subnet: hou.OpNode) -> None:
-    add_heading(
-        subnet,
-        "Pedipalp",
-    )
     add_float_parm(
         subnet,
         "pedipalp_coxa_length",

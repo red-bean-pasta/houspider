@@ -4,9 +4,6 @@ import hou
 from hou import OpNode, SopNode
 from houkit.noder import sopify
 
-from ..bases.attributes import Region as BaseRegion
-from ..legs.attributes import ID as LegID, Region as LegRegion, legmembrane, legsegment
-from ..pedipalps.attributes import ID as PedipalpID, Region as PedipalpRegion, pedipalpmembrane, pedipalpsegment
 from .attributes import (
     BodyJoint,
     LegJoint,
@@ -15,6 +12,8 @@ from .attributes import (
     leg_joint_name,
     pedipalp_joint_name,
 )
+from ..legs.attributes import ID as LegID, legmembrane, legsegment
+from ..pedipalps.attributes import ID as PedipalpID, pedipalpmembrane, pedipalpsegment
 
 
 def capture_skin(
@@ -25,19 +24,6 @@ def capture_skin(
     pack = parent.createNode("captureattribpack", "pack_capture")
     pack.setInput(0, weighted)
     return pack
-
-
-def deform_skin(
-    parent: OpNode,
-    captured_skin: SopNode,
-    capture_pose: SopNode,
-    animated_pose: SopNode,
-) -> SopNode:
-    deform = parent.createNode("kinefx::jointdeform", "joint_deform")
-    deform.setInput(0, captured_skin)
-    deform.setInput(1, capture_pose)
-    deform.setInput(2, animated_pose)
-    return deform
 
 
 def assign_skin_weights(node: SopNode) -> None:

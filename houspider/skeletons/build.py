@@ -114,6 +114,7 @@ def _add_skin_deform(
     deform.setInput(0, skin)
     deform.setInput(1, rest_skeleton)
     deform.setInput(2, posed_skeleton)
+    deform.parm("method").set("dualquat")
     deform.parm("deletecaptureattrib").set(0)
     return deform
 

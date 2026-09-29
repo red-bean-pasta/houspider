@@ -114,16 +114,16 @@ The complete handle set is generated in Houdini from the builder modules. The co
 
 | Parameter | Default | Description |
 | --- | ---: | --- |
-| `front_coxa_width_length_ratios` | `(0.75, 1.2)` | Front coxa width and length relative to the front socket width. |
+| `coxa_width_length_ratios` | `(0.75, 1.2)` | Front coxa width and length relative to the front socket width. |
 | `coxa_trochanter_height_ratio` | `0.63` | Trochanter height-to-width proportion. |
 | `other_segment_height_ratio` | `1.15` | Height-to-width proportion of post-trochanter segments. |
-| `front_segment_length_ratios` | `(0.33, 1.5, 0.9, 1.2, 1, 0.7)` | Length of each post-coxa front-leg segment relative to front coxa length. |
+| `segment_length_ratios` | `(0.33, 1.5, 0.9, 1.2, 1, 0.7)` | Length of each post-coxa front-leg segment relative to front coxa length. |
 | `min_flex_angles` | `(180, 200, 30, 95, 150, 170)` | Minimum flex angle for each post-coxa segment joint. |
 | `max_flex_angles` | `(180, 270, 160, 190, 178, 190)` | Maximum flex angle for each post-coxa segment joint. |
 | `min_yaw_angles` | `(0, 0, 0, 0, 0, 0)` | Minimum yaw angle for each post-coxa segment joint. |
 | `max_yaw_angles` | `(25, 0, 0, 0, 0, 20)` | Maximum yaw angle for each post-coxa segment joint. |
-| `other_leg_width_ratios` | `(0.8, 0.7, 0.8)` | Coxa-width scale for legs 2–4 relative to the front coxa. |
-| `other_leg_length_ratios` | `(0.88, 0.9, 1.1)` | Coxa-length scale for legs 2–4 relative to the front coxa. |
+| `leg_width_ratios` | `(0.8, 0.7, 0.8)` | Coxa-width scale for legs 2–4 relative to the front coxa. |
+| `leg_length_ratios` | `(0.88, 0.9, 1.1)` | Coxa-length scale for legs 2–4 relative to the front coxa. |
 
 ### Pedipalp
 

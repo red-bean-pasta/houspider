@@ -94,21 +94,21 @@ def _get_leg_param(
     control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
 
     front_socket_width = get_front_coxa_socket_width(geo)
-    front_coxa_width = front_socket_width * params.front_coxa_width_length_ratios.x()
-    front_coxa_length = front_socket_width * params.front_coxa_width_length_ratios.y()
+    front_coxa_width = front_socket_width * params.coxa_width_length_ratios.x()
+    front_coxa_length = front_socket_width * params.coxa_width_length_ratios.y()
 
     if leg_index == 0:
         coxa_width = front_coxa_width
         coxa_length = front_coxa_length
     else:
-        coxa_width = front_coxa_width * params.other_leg_width_ratios[leg_index - 1]
-        coxa_length = front_coxa_length * params.other_leg_length_ratios[leg_index - 1]
+        coxa_width = front_coxa_width * params.leg_width_ratios[leg_index - 1]
+        coxa_length = front_coxa_length * params.leg_length_ratios[leg_index - 1]
 
     coxa_width_length = (coxa_width, coxa_length)
 
     return LimbParam.from_specs(
         coxa_width_length=coxa_width_length,
-        length_ratios=tuple(params.front_segment_length_ratios),
+        length_ratios=tuple(params.segment_length_ratios),
         max_segment_yaws=tuple(params.max_yaw_angles)[1:],
         min_segment_flexes=tuple(params.min_flex_angles)[1:],
         coxa_trochanter_height_ratio=control_params.coxa_trochanter_height_ratio,

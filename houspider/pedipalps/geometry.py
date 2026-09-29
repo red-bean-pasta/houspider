@@ -182,7 +182,7 @@ def _get_pedipalp_param(
     base = pedipalp.input(0)
     front_coxa_length = (
         _get_front_coxa_socket_width(base.geometry())
-        * leg_params.front_coxa_width_length_ratios.y()
+        * leg_params.coxa_width_length_ratios.y()
     )
 
     coxa_width_length = _get_pedipalp_coxa_width_length(

@@ -7,7 +7,7 @@ from houkit.noder import (
     add_reloadable_subnet,
     sopify,
 )
-from houkit.parameterizer import add_float_parm, add_heading
+from houkit.parameterizer import add_float_parm
 
 from houspider.helper import rename_left_ids_node
 from . import topology
@@ -37,7 +37,25 @@ def build(
 
 
 def _add_parameters(legs: hou.OpNode) -> None:
-    add_heading(legs, "Basic")
+    add_float_parm(
+        legs,
+        "coxa_width_length_ratios",
+        2,
+        (0.75, 1.2),
+        (0.0, None),
+        label="Coxa Width Length",
+        help="X scales coxa width and Y scales coxa length from the front socket width.",
+    )
+    add_float_parm(
+        legs,
+        "segment_length_ratios",
+        6,
+        (0.33, 1.5, 0.9, 1.2, 1, 0.7),
+        (0.0, None),
+        hou.parmNamingScheme.Base1,
+        label="Front Leg Lengths",
+        help="One length ratio per post-coxa segment, measured against front coxa length.",
+    )
     add_float_parm(
         legs,
         "min_flex_angles",
@@ -78,44 +96,23 @@ def _add_parameters(legs: hou.OpNode) -> None:
         label="Maximum Yaw Angles",
         help="One maximum yaw angle per segment joint.",
     )
-    add_heading(legs, "Front Leg")
     add_float_parm(
         legs,
-        "front_coxa_width_length_ratios",
-        2,
-        (0.75, 1.2),
-        (0.0, None),
-        label="Front Coxa Width / Length",
-        help="X scales coxa width and Y scales coxa length from the front socket width.",
-    )
-    add_float_parm(
-        legs,
-        "front_segment_length_ratios",
-        6,
-        (0.33, 1.5, 0.9, 1.2, 1, 0.7),
-        (0.0, None),
-        hou.parmNamingScheme.Base1,
-        label="Front Leg Lengths",
-        help="One length ratio per post-coxa segment, measured against front coxa length.",
-    )
-    add_heading(legs, "Other Main Legs")
-    add_float_parm(
-        legs,
-        "other_leg_width_ratios",
+        "leg_width_ratios",
         3,
         (0.8, 0.7, 0.8),
         (0.0, None),
         label="Other Leg Widths",
-        help="Coxa-width scale for legs 2–4 relative to the front coxa.",
+        help="Width scales relative to the front leg for the 2nd-4th legs.",
     )
     add_float_parm(
         legs,
-        "other_leg_length_ratios",
+        "leg_length_ratios",
         3,
         (0.88, 0.9, 1.1),
         (0.0, None),
         label="Other Leg Lengths",
-        help="Coxa-length scale for legs 2–4 relative to the front coxa.",
+        help="Length scales relative to the front leg for the 2nd-4th legs.",
     )
 
 
