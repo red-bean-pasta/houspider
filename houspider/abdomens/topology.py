@@ -35,17 +35,17 @@ def fill_right_side_faces(node: hou.SopNode) -> None:
     su = lambda i: points[abdomensideupper(i)]
     sl = lambda i: points[abdomensidelower(i)]
 
-    fill_face([o, v(1), su(1), h(1)])
-    fill_face([o, h(1), sl(1), vn(1)])
+    fill_face([o, v(1), su(1), h(1)], True)
+    fill_face([o, h(1), sl(1), vn(1)], True)
 
     for j in range(1, 4):
-        fill_face([v(j), v(j + 1), su(j + 1), su(j)])
-        fill_face([su(j), su(j + 1), h(j + 1), h(j)])
-        fill_face([h(j), h(j + 1), sl(j + 1), sl(j)])
-        fill_face([sl(j), sl(j + 1), vn(j + 1), vn(j)])
+        fill_face([v(j), v(j + 1), su(j + 1), su(j)], True)
+        fill_face([su(j), su(j + 1), h(j + 1), h(j)], True)
+        fill_face([h(j), h(j + 1), sl(j + 1), sl(j)], True)
+        fill_face([sl(j), sl(j + 1), vn(j + 1), vn(j)], True)
 
-    fill_face([e, h(4), su(4), v(4)])
-    fill_face([e, vn(4), sl(4), h(4)])
+    fill_face([e, h(4), su(4), v(4)], True)
+    fill_face([e, vn(4), sl(4), h(4)], True)
 
 
 def connect_frames_tmp(node: hou.SopNode) -> None:

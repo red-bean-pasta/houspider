@@ -5,7 +5,6 @@ from houkit.noder import (
     add_merge_fuse,
     add_mirror,
     add_output,
-    add_recalculate_normal,
     add_reloadable_subnet,
     sopify,
 )
@@ -31,14 +30,13 @@ def build(spider_node: hou.OpNode, prosoma: hou.SopNode) -> hou.SopNode:
 
     # Kept for in-editor debug and visualize purpose
     connected = sopify(abdomen, lower_middle_frame, topology.connect_frames_tmp)
-    _ = add_merge(abdomen, "merge_frames_and_points", lower_middle_frame, connected)
+    _ = add_merge(abdomen, "debug_merge_frames_and_points", lower_middle_frame, connected)
 
     mirrored = add_mirror(abdomen, "mirror_left_faces", right_side_faces, (1, 0, 0), True, False)
     renamed = sopify(abdomen, mirrored, rename_left_ids_node)
     cleaned = sopify_chain(abdomen, renamed, (topology.add_regions, topology.cleanup_temp_attributes))
 
-    recalculate = add_recalculate_normal(abdomen, "recalculate_normals", cleaned)
-    opened = sopify(abdomen, recalculate, topology.open_abdomen_pedicel)
+    opened = sopify(abdomen, cleaned, topology.open_abdomen_pedicel)
     add_output(abdomen, "OUT_ABDOMEN", opened)
     abdomen.layoutChildren()
     return abdomen

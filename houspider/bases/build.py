@@ -51,7 +51,7 @@ def build(prosoma: hou.SopNode, sternum: hou.SopNode) -> hou.SopNode:
     buffered = sopify_chain(
         base,
         membrane,
-        (topology.extrude_base_buffer, ),
+        (topology.extrude_base_buffer, topology.remove_coxa_sockets),
     )
     add_output(base, "OUT_BASE", buffered)
 

@@ -5,7 +5,6 @@ from houkit.noder import (
     add_merge_fuse,
     add_recalculate_normal,
     add_reloadable_subnet,
-    sopify,
 )
 from houkit.nodes.sops import add_output
 from ..abdomens.build import build as build_abdomen
@@ -13,7 +12,6 @@ from ..legs.build import build as build_legs
 from ..pedicels.build import build as build_pedicel
 from ..pedipalps.build import build as build_pedipalps
 from ..prosomas.build import build as build_prosoma
-from . import topology
 
 
 def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
@@ -27,14 +25,13 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
 
     pedicel = build_pedicel(spider, merged_p_a)
     fused_pa_p = add_merge_fuse(spider, "merge_fuse_main_and_pedicel", merged_p_a, pedicel)
-    removed_sockets = sopify(spider, fused_pa_p, topology.remove_coxa_sockets)
 
-    legs = build_legs(spider, removed_sockets)
-    pedipalps = build_pedipalps(spider, removed_sockets, legs)
+    legs = build_legs(spider, fused_pa_p)
+    pedipalps = build_pedipalps(spider, fused_pa_p, legs)
     fused = add_merge_fuse(
         spider,
         "merge_fuse_main_legs_pedipalps",
-        removed_sockets,
+        fused_pa_p,
         legs,
         pedipalps,
     )

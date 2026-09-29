@@ -15,6 +15,7 @@ from ..helper import (
     get_id_range,
     points_by_id,
     points_from_geo,
+    prims_by_attr,
     replace_points,
     unique_points_start_with_id,
 )
@@ -269,6 +270,18 @@ def extrude_base_buffer(node: hou.SopNode) -> None:
     geo.deletePrims(inner_prims, keep_points=False)
 
     deduplicate_point_attribs(geo, "id", outer_loop_ids(), keep_first=False)
+
+
+def remove_coxa_sockets(node: hou.SopNode) -> None:
+    geo: hou.Geometry = node.geometry()
+    socket_prims = prims_by_attr(
+        geo,
+        "region",
+        (Region.COXASOCKET, Region.MAXILLASOCKET),
+        startswith=True,
+    )
+    assert len(socket_prims) == 16 + 2, f"Expected 18 coxa socket prims, got {len(socket_prims)}"
+    geo.deletePrims(socket_prims, keep_points=True)
 
 
 def _reflect_point_across_edge(

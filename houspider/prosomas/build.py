@@ -4,7 +4,6 @@ from houkit.parameterizings.operator import add_folder
 from houkit.noder import (
     add_merge_fuse,
     add_output,
-    add_recalculate_normal,
     add_reloadable_subnet,
     sopify,
 )
@@ -35,8 +34,7 @@ def build(spider: hou.OpNode) -> hou.SopNode:
     mouth = build_mouth(prosoma, b_d_fuse)
     chelicerae = build_chelicerae(prosoma, mouth)
 
-    recalculate = add_recalculate_normal(prosoma, "recalculate_normals", chelicerae)
-    positioned = _position_prosoma(prosoma, recalculate)
+    positioned = _position_prosoma(prosoma, chelicerae)
     opened = sopify(prosoma, positioned, pedicel.open_prosoma_pedicel)
 
     _ = add_output(prosoma, "OUT_PROSOMA", opened)
