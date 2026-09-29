@@ -6,7 +6,7 @@ from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
 from ..helper import points_from_geo, positions_from_geo
 from ..legs.attributes import legsegment
 from ..pedipalps.attributes import pedipalpsegment
-from ..spiders.attributes import ID as PEDICEL_IDS
+from ..prosomas.attributes import ID as PEDICEL_IDS
 
 
 def get_body_bone_positions(geo: hou.Geometry) -> list[hou.Vector3]:

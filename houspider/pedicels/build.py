@@ -2,7 +2,15 @@ from enum import StrEnum, auto
 
 import hou
 
-from ..spiders import attributes as spider_attributes
+from houkit.attributer import add_prim_attrib
+from houkit.noder import (
+    add_output,
+    add_reloadable_subnet,
+    sopify,
+)
+from houkit.topology import fill_pentagon_with_buffer
+
+from ..prosomas import attributes as spider_attributes
 from ..abdomens import attributes as abdomen_attributes
 from ..helper import (
     affix_id,
@@ -11,13 +19,6 @@ from ..helper import (
     replace_points,
     set_prim_attr_where_blank,
 )
-from houkit.attributer import add_prim_attrib
-from houkit.noder import (
-    add_output,
-    add_reloadable_subnet,
-    sopify,
-)
-from houkit.topology import fill_pentagon_with_buffer
 
 
 class ID(StrEnum):

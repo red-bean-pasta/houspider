@@ -1,10 +1,9 @@
 import hou
-
 from houkit.noder import add_fuse, add_mirror, add_output, add_reloadable_subnet, sopify
-from houkit.parameterizer import add_float_parm, add_heading
+from houkit.parameterizer import add_float_parm
 
-from ..helper import rename_left_ids_node, sopify_chain
 from . import topology
+from ..helper import rename_left_ids_node, sopify_chain
 
 
 def build(

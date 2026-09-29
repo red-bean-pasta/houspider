@@ -1,6 +1,6 @@
 import hou
+from houkit.parameterizings.operator import add_folder
 
-from ..bases import attributes as base_attributes
 from houkit.noder import (
     add_merge_fuse,
     add_output,
@@ -10,11 +10,12 @@ from houkit.noder import (
 )
 from houkit.parameterizer import add_float_parm
 
+from . import pedicel
+from ..bases import attributes as base_attributes
 from ..bases.build import build as build_base
 from ..cheliceraes.build import build as build_chelicerae
 from ..dorsals.build import build as build_dorsal
 from ..mouths.build import build as build_mouth
-from ..spiders import topology
 from ..sternums.build import build as build_sternum
 
 
@@ -36,7 +37,7 @@ def build(spider: hou.OpNode) -> hou.SopNode:
 
     recalculate = add_recalculate_normal(prosoma, "recalculate_normals", chelicerae)
     positioned = _position_prosoma(prosoma, recalculate)
-    opened = sopify(prosoma, positioned, topology.open_prosoma_pedicel)
+    opened = sopify(prosoma, positioned, pedicel.open_prosoma_pedicel)
 
     _ = add_output(prosoma, "OUT_PROSOMA", opened)
 
@@ -45,6 +46,11 @@ def build(spider: hou.OpNode) -> hou.SopNode:
 
 
 def _add_parameters(prosoma: hou.SopNode) -> None:
+    add_folder(
+        prosoma,
+        "pedicel",
+        folder_type=hou.folderType.Collapsible,
+    )
     add_float_parm(
         prosoma,
         "pedicel_opening_ratios",
@@ -52,6 +58,7 @@ def _add_parameters(prosoma: hou.SopNode) -> None:
         (0.5, 0.5),
         (0.0, 1.0),
         label="Pedicel Opening",
+        folder_label="Pedicel",
         help="X sets the side and upper opening proportion. Y places the lower opening between the base end and sternum rim.",
     )
 

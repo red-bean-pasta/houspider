@@ -6,7 +6,7 @@ from houkit.attributer import add_global_attrib
 from houkit.geomath import get_point_on_ellipse_2d
 from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_parms
-from ..spiders import attributes as spider_attributes
+from ..prosomas import attributes as spider_attributes
 from ..helper import add_id_point, points_by_id, positions_from_geo, replace_points
 from .attributes import (
     abdomenend,

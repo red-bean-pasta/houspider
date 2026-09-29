@@ -3,6 +3,7 @@ import hou
 from houkit.noder import get_parent
 from houkit.parameterizer import get_parms
 from houkit.topology import fill_face, fill_pentagon, offset_point
+
 from .attributes import prosomapedicelleft, prosomapedicelright, prosomapedicelupper, prosomapedicellower
 from ..bases import attributes as base_attributes
 from ..dorsals import attributes as dorsal_attributes
