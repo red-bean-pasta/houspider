@@ -72,6 +72,14 @@ def add_parameters(subnet: hou.OpNode) -> None:
         label="Endite Length",
         help="Extension from the endite membrane attachment toward the coxa.",
     )
+    add_float_parm(
+        subnet,
+        "endite_surface_size_ratio",
+        default=0.06,
+        min_max=(0.0, 1.0),
+        label="Endite Surface Size",
+        help="Size of the added endite surface faces.",
+    )
 
 
 def _add_controls(parent: hou.SopNode) -> hou.SopNode:
@@ -84,13 +92,5 @@ def _add_controls(parent: hou.SopNode) -> hou.SopNode:
         min_max=(0.0, 1.0),
         label="Endite Buffer",
         help="X positions the buffer across the coxa end; Y sets its lengthwise reach.",
-    )
-    add_float_parm(
-        control,
-        "endite_surface_size_ratio",
-        default=0.06,
-        min_max=(0.0, 1.0),
-        label="Endite Surface Size",
-        help="Size of the added endite surface faces.",
     )
     return control

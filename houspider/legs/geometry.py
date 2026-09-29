@@ -111,13 +111,13 @@ def _get_leg_param(
         length_ratios=tuple(params.segment_length_ratios),
         max_segment_yaws=tuple(params.max_yaw_angles)[1:],
         min_segment_flexes=tuple(params.min_flex_angles)[1:],
-        coxa_trochanter_height_ratio=control_params.coxa_trochanter_height_ratio,
-        other_segment_height_ratio=control_params.other_segment_height_ratio,
-        spine_ratio=control_params.segment_bulge_bias_ratio,
-        shrink_ratios=control_params.segment_taper_ratios,
+        coxa_trochanter_height_ratio=params.coxa_trochanter_height_ratio,
+        other_segment_height_ratio=params.other_segment_height_ratio,
+        spine_ratio=control_params.segment_spine_ratio,
+        shrink_ratios=control_params.joint_shrink_ratio,
         minimum_membrane=control_params.joint_clearance_limits,
         support_loop_ratio=control_params.joint_support_loop_ratio,
-        tarsus_wedge_angle=control_params.tarsus_wedge_angle,
+        tarsus_wedge_angle=params.tarsus_wedge_angle,
     )
 
 

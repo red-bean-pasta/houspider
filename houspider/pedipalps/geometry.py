@@ -199,13 +199,13 @@ def _get_pedipalp_param(
         length_ratios=length_ratios,
         max_segment_yaws=max_segment_yaws,
         min_segment_flexes=min_segment_flexes,
-        coxa_trochanter_height_ratio=control_params.coxa_trochanter_height_ratio,
-        other_segment_height_ratio=control_params.other_segment_height_ratio,
-        spine_ratio=control_params.segment_bulge_bias_ratio,
-        shrink_ratios=control_params.segment_taper_ratios,
+        coxa_trochanter_height_ratio=leg_params.coxa_trochanter_height_ratio,
+        other_segment_height_ratio=leg_params.other_segment_height_ratio,
+        spine_ratio=control_params.segment_spine_ratio,
+        shrink_ratios=control_params.joint_shrink_ratio,
         minimum_membrane=control_params.joint_clearance_limits,
         support_loop_ratio=control_params.joint_support_loop_ratio,
-        tarsus_wedge_angle=control_params.tarsus_wedge_angle,
+        tarsus_wedge_angle=leg_params.tarsus_wedge_angle,
     )
 
 def _get_pedipalp_coxa_width_length(

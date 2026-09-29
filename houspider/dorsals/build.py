@@ -16,6 +16,7 @@ def build(prosoma: hou.SopNode, base: hou.SopNode) -> hou.SopNode:
     dorsal = add_reloadable_subnet(prosoma, "dorsal")
     dorsal.setInput(0, base)
     _add_parameters(dorsal)
+    _add_controls(dorsal)
 
     source = dorsal.indirectInputs()[0]
     base_rim = sopify(dorsal, source, topology.extract_base_rim)
@@ -103,8 +104,12 @@ def _add_parameters(dorsal: hou.SopNode) -> None:
         label="Lip Extrusion",
         help="X is lengthwise extrusion; Y is vertical extrusion.",
     )
+
+
+def _add_controls(parent: hou.SopNode) -> hou.SopNode:
+    control = parent.createNode("null", "CONTROL")
     add_float_parm(
-        dorsal,
+        control,
         "membrane_ratio",
         1,
         0.035,
@@ -112,3 +117,4 @@ def _add_parameters(dorsal: hou.SopNode) -> None:
         label="Membrane Width",
         help="Shared prosoma setting. Each region applies it against its own local membrane scale.",
     )
+    return control

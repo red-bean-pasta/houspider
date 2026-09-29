@@ -68,21 +68,21 @@ def _add_controls(parent: hou.SopNode) -> hou.SopNode:
     )
     add_float_parm(
         control,
-        "posterior_outline_angle",
-        1,
-        150.0,
-        (0.0, 180.0),
-        label="Posterior Outline Angle",
-        help="Interior angle that shapes the rear sternum outline.",
-    )
-    add_float_parm(
-        control,
         "front_width_ratio",
         1,
         0.455,
         (0.0, 1.0),
         label="Front Width",
         help="Anterior width relative to the sternum’s widest span.",
+    )
+    add_float_parm(
+        control,
+        "posterior_outline_angle",
+        1,
+        150.0,
+        (0.0, 180.0),
+        label="Posterior Outline Angle",
+        help="Interior angle that shapes the rear sternum outline.",
     )
     add_float_parm(
         control,

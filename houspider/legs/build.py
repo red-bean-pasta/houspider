@@ -53,8 +53,35 @@ def _add_parameters(legs: hou.OpNode) -> None:
         (0.33, 1.5, 0.9, 1.2, 1, 0.7),
         (0.0, None),
         hou.parmNamingScheme.Base1,
-        label="Front Leg Lengths",
+        label="Segment Lengths",
         help="One length ratio per post-coxa segment, measured against front coxa length.",
+    )
+    add_float_parm(
+        legs,
+        "coxa_trochanter_height_ratio",
+        1,
+        0.63,
+        (0.0, None),
+        label="Coxa-Trochanter Height",
+        help="Height-to-width proportion of the trochanter segment.",
+    )
+    add_float_parm(
+        legs,
+        "other_segment_height_ratio",
+        1,
+        1.15,
+        (0.0, None),
+        label="Other Segment Height",
+        help="Height-to-width proportion of post-trochanter segments.",
+    )
+    add_float_parm(
+        legs,
+        "tarsus_wedge_angle",
+        1,
+        45.0,
+        (-60.0, 60.0),
+        label="Tarsus Wedge",
+        help="Terminal tarsus wedge angle.",
     )
     add_float_parm(
         legs,
@@ -120,48 +147,30 @@ def _add_controls(parent: hou.SopNode) -> hou.SopNode:
     control = parent.createNode("null", "CONTROL")
     add_float_parm(
         control,
-        "joint_support_loop_ratio",
+        "coxa_start_wedge_angle",
         1,
-        0.015,
-        (0.0, 1.0),
-        label="Joint Support Loop",
-        help="Inset width at coxa sockets and segment joints, relative to coxa width.",
+        45.0,
+        (0.0, 90.0),
+        label="Coxa Start Wedge",
+        help="Wedge angle used to place the coxa socket's lower support.",
     )
     add_float_parm(
         control,
-        "coxa_trochanter_height_ratio",
-        1,
-        0.63,
-        (0.0, None),
-        label="Coxa-Trochanter Height",
-        help="Height-to-width proportion of the trochanter segment.",
-    )
-    add_float_parm(
-        control,
-        "other_segment_height_ratio",
-        1,
-        1.15,
-        (0.0, None),
-        label="Other Segment Height",
-        help="Height-to-width proportion of post-trochanter segments.",
-    )
-    add_float_parm(
-        control,
-        "segment_bulge_bias_ratio",
+        "segment_spine_ratio",
         1,
         0.4,
         (0.0, None),
-        label="Segment Bulge Bias",
+        label="Segment Spine Ratio",
         help="Moves the segment’s fullest area between its upper and lower sides.",
     )
     add_float_parm(
         control,
-        "segment_taper_ratios",
+        "joint_shrink_ratio",
         2,
         (0.98, 0.875),
         (0.0, None),
         hou.parmNamingScheme.Base1,
-        label="Segment Taper",
+        label="Joint Shrink Ratio",
         help="X sets taper along a segment; Y sets the size change at each joint.",
     )
     add_float_parm(
@@ -176,20 +185,11 @@ def _add_controls(parent: hou.SopNode) -> hou.SopNode:
     )
     add_float_parm(
         control,
-        "tarsus_wedge_angle",
+        "joint_support_loop_ratio",
         1,
-        45.0,
-        (-60.0, 60.0),
-        label="Tarsus Wedge",
-        help="Terminal tarsus wedge angle.",
-    )
-    add_float_parm(
-        control,
-        "coxa_start_wedge_angle",
-        1,
-        45.0,
-        (0.0, 90.0),
-        label="Coxa Start Wedge",
-        help="Wedge angle used to place the coxa socket's lower support.",
+        0.015,
+        (0.0, 1.0),
+        label="Joint Support Loop",
+        help="Inset width at coxa sockets and segment joints, relative to coxa width.",
     )
     return control

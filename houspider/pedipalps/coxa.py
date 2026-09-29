@@ -69,10 +69,11 @@ def fill_top_face(node: hou.SopNode) -> None:
 
 def add_maxilla_quads(node: hou.SopNode) -> None:
     geo: hou.Geometry = node.geometry()
-    control_params = get_parms(get_control(node, "CONTROL"), use_tuple=False)
+    parent = get_parent(node)
+    endite_surface_size_ratio = get_float_parm(parent, "endite_surface_size_ratio")
     pos = _get_maxilla_pole(node)
     normal = _get_averaged_maxilla_quad_normal(geo, pos)
-    _add_maxilla_quads_to_geo(geo, pos, normal, control_params.endite_surface_size_ratio)
+    _add_maxilla_quads_to_geo(geo, pos, normal, endite_surface_size_ratio)
 
 def _get_maxilla_pole(node: hou.SopNode) -> hou.Vector3:
     geo: hou.Geometry = node.geometry()
