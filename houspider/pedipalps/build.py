@@ -48,7 +48,7 @@ def build(
 def add_parameters(subnet: hou.OpNode) -> None:
     add_float_parm(
         subnet,
-        "pedipalp_coxa_length",
+        "coxa_length",
         default=0.8,
         min_max=(0.0, None),
         label="Coxa Length",
@@ -56,7 +56,7 @@ def add_parameters(subnet: hou.OpNode) -> None:
     )
     add_float_parm(
         subnet,
-        "pedipalp_segment_length_ratios",
+        "segment_length_ratios",
         5,
         (0.17, 0.8, 0.4, 0.45, 0.4),
         (0.0, None),

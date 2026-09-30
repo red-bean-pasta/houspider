@@ -187,10 +187,10 @@ def _get_pedipalp_param(
         get_front_coxa_socket_width(base.geometry())
         * leg_params.coxa_length_ratio
     )
-    pedipalp_coxa_length = front_coxa_length * params.pedipalp_coxa_length
+    pedipalp_coxa_length = front_coxa_length * params.coxa_length
     socket_size = get_pedipalp_socket_size(geo)
 
-    length_ratios = tuple(params.pedipalp_segment_length_ratios)
+    length_ratios = tuple(params.segment_length_ratios)
     segment_sections = _get_pedipalp_segment_sections(legs)
 
     max_segment_yaws = _remove_metatarsus(tuple(leg_params.max_yaw_angles))[1:]

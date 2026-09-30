@@ -128,8 +128,8 @@ The complete handle set is generated in Houdini from the builder modules. The co
 
 | Parameter | Default | Description |
 | --- | ---: | --- |
-| `pedipalp_coxa_length` | `0.8` | Pedipalp coxa length relative to the front-leg coxa length. |
-| `pedipalp_segment_length_ratios` | `(0.17, 0.8, 0.4, 0.45, 0.4)` | Length of each post-coxa pedipalp segment relative to pedipalp coxa length. |
+| `coxa_length` | `0.8` | Pedipalp coxa length relative to the front-leg coxa length. |
+| `segment_length_ratios` | `(0.17, 0.8, 0.4, 0.45, 0.4)` | Length of each post-coxa pedipalp segment relative to pedipalp coxa length. |
 | `endite_length_ratio` | `0.95` | Endite extension from its membrane attachment toward the coxa. |
 
 
