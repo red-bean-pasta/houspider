@@ -21,32 +21,55 @@ class LimbAttributes:
 
 @dataclass
 class LimbParam:
-    coxa_width_length: tuple[float, float]
+    socket_size: tuple[float, float]
+
+    coxa_length: float
     length_ratios: tuple[float, ...] | list[float]
+
+    segment_sections: tuple[tuple[tuple[float, float, float], ...], ...]
+
     yaw_flex_specs: tuple[tuple[float, float], ...]
-
-    tarsus_wedge_angle: float = 45.0
-
-    coxa_trochanter_height_ratio: float = 0.63
-    other_segment_height_ratio: float = 1.15
-    spine_ratio: float = 0.5
-    shrink_ratios: tuple[float, float] = (0.95, 0.875)
-    support_loop_ratio: float = 0.015
-
     minimum_membrane: tuple[float, float] = (1.0, 5.0)
 
+    spine_ratio: float = 0.5
+    support_loop_ratio: float = 0.015
+    tarsus_wedge_angle: float = 45.0
+
     def __post_init__(self) -> None:
-        assert len(self.length_ratios) == len(self.yaw_flex_specs), (
-            f"Length mismatch: length_ratios ({len(self.length_ratios)}) != yaw_flex_specs ({len(self.yaw_flex_specs)})"
+        assert (
+            len(self.length_ratios)
+            == len(self.yaw_flex_specs)
+            == len(self.segment_sections) - 1
+        ), (
+            f"Length mismatch: length_ratios ({len(self.length_ratios)}), yaw_flex_specs ({len(self.yaw_flex_specs)} and segment_sections ({len(self.segment_sections)} does not match)"
         )
+
+        segment_sections = []
+        for sections in self.segment_sections:
+            sections = sorted(sections, key=lambda section: section[0])
+
+            assert sections
+            assert all(section[0] >= 0 for section in sections)
+
+            if sections[0][0] > 1e-5:
+                sections.insert(0, (0.0, *sections[0][1:]))
+            if sections[-1][0] < 1 - 1e-5:
+                sections.append((1.0, *sections[-1][1:]))
+
+            segment_sections.append(tuple(sections))
+
+        self.segment_sections = tuple(segment_sections)
+
 
     @classmethod
     def from_specs(
         cls,
-        coxa_width_length: tuple[float, float],
+        socket_size: tuple[float, float],
+        coxa_length: float,
         length_ratios: tuple[float, ...] | list[float],
         max_segment_yaws: tuple[float, ...] | list[float],
         min_segment_flexes: tuple[float, ...] | list[float],
+        segment_sections: tuple[tuple[tuple[float, float, float], ...], ...] = (),
         **kwargs,
     ) -> Self:
         assert len(max_segment_yaws) == len(min_segment_flexes), (
@@ -57,8 +80,10 @@ class LimbParam:
         )
         segment_specs = tuple(zip(max_segment_yaws, min_segment_flexes))
         return cls(
-            coxa_width_length=coxa_width_length,
+            socket_size=socket_size,
+            coxa_length=coxa_length,
             length_ratios=length_ratios,
             yaw_flex_specs=segment_specs,
+            segment_sections=segment_sections,
             **kwargs,
         )

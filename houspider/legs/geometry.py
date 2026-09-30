@@ -7,7 +7,7 @@ from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_parms
 from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_positions
 
-from ..attributes import GlobalAttrib
+from ..attributes import GlobalAttrib, LegSegment
 from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
 from ..helper import points_from_geo, set_point_id
 from ..segments.models import LimbAttributes, LimbParam
@@ -94,31 +94,47 @@ def _get_leg_param(
     control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
 
     front_socket_width = get_front_coxa_socket_width(geo)
-    front_coxa_width = front_socket_width * params.coxa_width_length_ratios.x()
-    front_coxa_length = front_socket_width * params.coxa_width_length_ratios.y()
+    front_socket_height = get_front_coxa_socket_height(geo)
+    front_coxa_length = front_socket_width * params.coxa_length_ratio
 
     if leg_index == 0:
-        coxa_width = front_coxa_width
+        socket_size = (front_socket_width, front_socket_height)
         coxa_length = front_coxa_length
     else:
-        coxa_width = front_coxa_width * params.leg_width_ratios[leg_index - 1]
-        coxa_length = front_coxa_length * params.leg_length_ratios[leg_index - 1]
+        width_ratio = params.leg_width_ratios[leg_index - 1]
+        length_ratio = params.leg_length_ratios[leg_index - 1]
+        socket_size = (front_socket_width * width_ratio, front_socket_height * width_ratio)
+        coxa_length = front_coxa_length * length_ratio
 
-    coxa_width_length = (coxa_width, coxa_length)
+    segment_sections = _get_segment_sections(parent)
 
     return LimbParam.from_specs(
-        coxa_width_length=coxa_width_length,
+        socket_size=socket_size,
+        coxa_length=coxa_length,
+        segment_sections=segment_sections,
         length_ratios=tuple(params.segment_length_ratios),
         max_segment_yaws=tuple(params.max_yaw_angles)[1:],
         min_segment_flexes=tuple(params.min_flex_angles)[1:],
-        coxa_trochanter_height_ratio=params.coxa_trochanter_height_ratio,
-        other_segment_height_ratio=params.other_segment_height_ratio,
         spine_ratio=control_params.segment_spine_ratio,
-        shrink_ratios=control_params.joint_shrink_ratio,
         minimum_membrane=control_params.joint_clearance_limits,
         support_loop_ratio=control_params.joint_support_loop_ratio,
         tarsus_wedge_angle=params.tarsus_wedge_angle,
     )
+
+
+def _get_segment_sections(
+    node: hou.OpNode,
+) -> tuple[tuple[tuple[float, float, float], ...], ...]:
+    all_sections = []
+    for name in LegSegment:
+        sections_parm = node.parm(f"{name}_sections")
+        num_sections = sections_parm.eval()
+        sections = []
+        for i in range(num_sections):
+            parm_tuple = node.parmTuple(f"{name}_section{i + 1}")
+            sections.append(tuple(parm_tuple.eval()))
+        all_sections.append(tuple(sections))
+    return tuple(all_sections)
 
 
 def _get_leg_attributes(leg_index: int) -> LimbAttributes:
@@ -290,3 +306,12 @@ def get_front_coxa_socket_width(geo: hou.Geometry) -> float:
         basecoxamemebrane(1, 3),
     )
     return (pos_top_bz.position() - pos_top_sz.position()).length()
+
+
+def get_front_coxa_socket_height(geo: hou.Geometry) -> float:
+    pos_top_sz, pos_btm_sz = points_from_geo(
+        geo,
+        basecoxamembranemiddle(1, 2),
+        basecoxamembranemiddle(1, 1),
+    )
+    return (pos_top_sz.position() - pos_btm_sz.position()).length()

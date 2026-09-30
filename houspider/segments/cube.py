@@ -1,6 +1,6 @@
 import math
 
-import hou
+from hou import Vector3, Vector2
 from houkit.models import Moject
 
 from .models import LimbParam
@@ -8,183 +8,113 @@ from .models import LimbParam
 
 def get_cube_points(
     param: LimbParam,
-) -> Moject[list[list[hou.Vector3]]]:
+) -> Moject[list[list[Vector3]]]:
     assert len(param.yaw_flex_specs) == len(param.length_ratios)
 
-    coxa_width, coxa_length = param.coxa_width_length
-    coxa_height = coxa_width * param.coxa_trochanter_height_ratio
-    half_w = coxa_width / 2.0
-    top_y = 0.0
-    btm_y = -coxa_height
-    start_z = 0.0
-    end_z = -coxa_length
-
-    # Loop corners ordered: 0: lb, 1: rb, 2: ru, 3: lu
-    coxa = [
-        # Start loop (Z = start_z)
-        hou.Vector3(-half_w, btm_y, start_z),  # lb (corner 1)
-        hou.Vector3(half_w, btm_y, start_z),   # rb (corner 2)
-        hou.Vector3(half_w, top_y, start_z),   # ru (corner 3)
-        hou.Vector3(-half_w, top_y, start_z),  # lu (corner 4)
-        # End loop (Z = end_z)
-        hou.Vector3(-half_w, btm_y, end_z),    # lb (corner 1)
-        hou.Vector3(half_w, btm_y, end_z),     # rb (corner 2)
-        hou.Vector3(half_w, top_y, end_z),     # ru (corner 3)
-        hou.Vector3(-half_w, top_y, end_z),    # lu (corner 4)
-    ]
+    coxa = _build_segment(param.socket_size, param.segment_sections[0], param.coxa_length)
 
     messages: list[str] = []
-    segments: list[list[hou.Vector3]] = [coxa]
+    segments: list[list[Vector3]] = [coxa]
     for i, (max_yaw, min_flex) in enumerate(param.yaw_flex_specs):
-        length_ratio_to_former = (
-            param.length_ratios[i] / param.length_ratios[i - 1]
-            if i > 0 else
-            param.length_ratios[0] / 1.0
-        )
-        cur_height_ratio = (
-            param.coxa_trochanter_height_ratio
-            if i == 0 else
-            param.other_segment_height_ratio
-        )
-        (former_wedged, latter), seg_messages = _append_segment(
-            segments[-1],
-            cur_height_ratio,
-            param.shrink_ratios,
-            length_ratio_to_former,
-            param.spine_ratio,
+        cur_sections = param.segment_sections[i + 1]
+        seg_length = param.coxa_length * param.length_ratios[i]
+        former = segments[-1]
+        former_end_w, former_end_h = _get_section_width_height(former, -1)
+        latter = _build_segment((former_end_w, former_end_h), cur_sections, seg_length)
+        latter_start_w, latter_start_h = _get_section_width_height(latter, 0)
+
+        (offset, wedge_angle), seg_messages = _calc_segment_offset_and_wedge(
             max_yaw,
             min_flex,
+            param.spine_ratio,
+            ((former_end_w, former_end_h), (latter_start_w, latter_start_h)),
             param.minimum_membrane,
         )
         messages.extend(seg_messages)
-        segments[-1] = former_wedged
+
+        _position_latter_segment(former, latter, offset)
+        _wedge_joint(former, latter, wedge_angle)
         segments.append(latter)
 
     assert len(segments) == len(param.yaw_flex_specs) + 1
     return Moject(segments, messages)
 
 
-def _append_segment(
-    former_positions: list[hou.Vector3],
-    height_ratio: float,
-    section_shrink_ratios: tuple[float, float],
-    length_ratio: float,
-    spine_ratio: float,
-    max_yaw: float,
-    min_flex: float,
-    minimum_membrane: tuple[float, float],
-) -> Moject[tuple[list[hou.Vector3], list[hou.Vector3]]]:
-    assert len(former_positions) == 8, f"Expected 8 positions for former segment, got {len(former_positions)}"
-
-    # former_positions are ordered:
-    # 0: start lb, 1: start rb, 2: start ru, 3: start lu
-    # 4: end lb,   5: end rb,   6: end ru,   7: end lu
-    start_btm_lb = former_positions[0]
-    start_btm_rb = former_positions[1]
-    start_top_ru = former_positions[2]
-    start_top_lu = former_positions[3]
-    end_btm_lb = former_positions[4]
-    end_btm_rb = former_positions[5]
-    end_top_ru = former_positions[6]
-    end_top_lu = former_positions[7]
-
-    former_width = end_top_ru.x() - end_top_lu.x()
-    former_height = end_top_ru.y() - end_btm_rb.y()
-    former_length = start_top_ru.z() - end_top_ru.z()
-    former_size = (former_width, former_height)
-
-    in_shrink, between_shrink = section_shrink_ratios
-    latter_start_width = former_width * between_shrink
-    latter_start_height = latter_start_width * height_ratio
-    latter_start_size = (latter_start_width, latter_start_height)
-    latter_length = former_length * length_ratio
-
-    latter_end_width = latter_start_width * in_shrink
-    latter_end_height = latter_start_height * in_shrink
-
-    (offset, wedge_angle), messages = _calc_segment_offset_and_wedge(
-        max_yaw,
-        min_flex,
-        spine_ratio,
-        (former_size, latter_start_size),
-        minimum_membrane,
-    )
-
-    latter_segment = _build_latter_segment_positions(
-        end_top_ru,
-        offset,
-        (latter_start_width, latter_start_height),
-        (latter_end_width, latter_end_height),
-        latter_length,
-        wedge_angle,
-        spine_ratio,
-    )
-    former_positions_list = _apply_former_segment_wedge(
-        former_positions,
-        start_btm_lb,
-        start_btm_rb,
-        end_btm_lb,
-        end_btm_rb,
-        former_height,
-        wedge_angle,
-    )
-
-    return Moject((former_positions_list, latter_segment), messages)
-
-
-def _build_latter_segment_positions(
-    former_end_top_ru: hou.Vector3,
-    offset: hou.Vector2,
-    start_size: tuple[float, float],
-    end_size: tuple[float, float],
+def _build_segment(
+    reference_section: tuple[float, float],
+    sections: tuple[tuple[float, float, float], ...],
     length: float,
+) -> list[Vector3]:
+    ref_w, ref_h = reference_section
+    points: list[Vector3] = []
+    for len_ratio, w_ratio, h_ratio in sections:
+        w = ref_w * w_ratio
+        h = ref_h * h_ratio
+        hw = w / 2.0
+        hh = h / 2.0
+        z = -length * len_ratio
+        # Loop corners ordered: 0: left bottom, 1: right bottom, 2: right upper, 3: left upper
+        points.extend([
+            Vector3(-hw, -hh, z),
+            Vector3(hw, -hh, z),
+            Vector3(hw, hh, z),
+            Vector3(-hw, hh, z),
+        ])
+    return points
+
+
+def _position_latter_segment(
+    former: list[Vector3],
+    latter: list[Vector3],
+    offset: Vector2,
+) -> None:
+    former_end = former[-4:]
+    former_end_center = sum(former_end, Vector3()) / len(former_end)
+    _, former_end_h = _get_section_width_height(former, -1)
+    _, latter_start_h = _get_section_width_height(latter, 0)
+    target_center = Vector3(
+        0.0,
+        former_end_center.y() + (former_end_h - latter_start_h) / 2 + offset.y(),
+        former_end_center.z() - offset.x(),
+    )
+    _offset_segment(latter, target_center)
+
+
+def _offset_segment(
+    positions: list[Vector3],
+    offset: Vector3,
+) -> list[Vector3]:
+    for i in range(len(positions)):
+        positions[i] = positions[i] + offset
+    return positions
+
+
+def _get_section_width_height(positions: list[Vector3], index: int) -> tuple[float, float]:
+    start = index * 4 if index >= 0 else len(positions) + index * 4
+    section = positions[start: start + 4]
+    w = section[2].x() - section[3].x()
+    h = section[2].y() - section[1].y()
+    return w, h
+
+
+def _wedge_joint(
+    former_segment: list[Vector3],
+    latter_segment: list[Vector3],
     wedge_angle: float,
-    spine_ratio: float,
-) -> list[hou.Vector3]:
-    start_width, start_height = start_size
-    end_width, end_height = end_size
+) -> None:
+    def _wedge_bottom(
+        segment: list[Vector3],
+        section_index: int,
+        direction: float,
+    ) -> None:
+        _, height = _get_section_width_height(segment, section_index)
+        delta = height * math.tan(math.radians(wedge_angle)) * direction
+        start = section_index * 4 if section_index >= 0 else len(segment) + section_index * 4
+        segment[start] += Vector3(0.0, 0.0, delta)
+        segment[start + 1] += Vector3(0.0, 0.0, delta)
 
-    start_top_y = former_end_top_ru.y() + offset.y()
-    start_btm_y = start_top_y - start_height
-    start_z = former_end_top_ru.z() - offset.x()
-    end_z = start_z - length
-    start_hw = start_width / 2.0
-    end_hw = end_width / 2.0
-
-    start_btm_z = start_z - start_height * math.tan(math.radians(wedge_angle))
-    end_top_y = start_top_y - (start_height - end_height) * spine_ratio
-    end_btm_y = end_top_y - end_height
-
-    # Loop corners ordered: 0: lb, 1: rb, 2: ru, 3: lu
-    return [
-        hou.Vector3(-start_hw, start_btm_y, start_btm_z),  # lb (corner 1)
-        hou.Vector3(start_hw, start_btm_y, start_btm_z),   # rb (corner 2)
-        hou.Vector3(start_hw, start_top_y, start_z),       # ru (corner 3)
-        hou.Vector3(-start_hw, start_top_y, start_z),      # lu (corner 4)
-        hou.Vector3(-end_hw, end_btm_y, end_z),            # lb (corner 1)
-        hou.Vector3(end_hw, end_btm_y, end_z),             # rb (corner 2)
-        hou.Vector3(end_hw, end_top_y, end_z),             # ru (corner 3)
-        hou.Vector3(-end_hw, end_top_y, end_z),            # lu (corner 4)
-    ]
-
-
-def _apply_former_segment_wedge(
-    former_positions: list[hou.Vector3],
-    start_btm_lb: hou.Vector3,
-    start_btm_rb: hou.Vector3,
-    end_btm_lb: hou.Vector3,
-    end_btm_rb: hou.Vector3,
-    former_height: float,
-    wedge_angle: float,
-) -> list[hou.Vector3]:
-    delta_z = former_height * math.tan(math.radians(wedge_angle))
-    new_end_btm_lb_z = min(end_btm_lb.z() + delta_z, start_btm_lb.z())
-    new_end_btm_rb_z = min(end_btm_rb.z() + delta_z, start_btm_rb.z())
-
-    former_positions_list = list(former_positions)
-    former_positions_list[4] = hou.Vector3(end_btm_lb.x(), end_btm_lb.y(), new_end_btm_lb_z)
-    former_positions_list[5] = hou.Vector3(end_btm_rb.x(), end_btm_rb.y(), new_end_btm_rb_z)
-    return former_positions_list
+    _wedge_bottom(former_segment, -1, 1.0)
+    _wedge_bottom(latter_segment, 0, -1.0)
 
 
 def _calc_segment_offset_and_wedge(
@@ -193,7 +123,7 @@ def _calc_segment_offset_and_wedge(
     spine_ratio: float,
     segment_size: tuple[tuple[float, float], tuple[float, float]],
     minimum_membrane: tuple[float, float],
-) -> Moject[tuple[hou.Vector2, float]]:
+) -> Moject[tuple[Vector2, float]]:
     (former_width, former_height), (latter_width, latter_height) = segment_size
 
     (offset_x, wedge_angle), messages = _calc_membrane_spec(max_yaw, min_flex, segment_size, minimum_membrane)
@@ -206,7 +136,7 @@ def _calc_segment_offset_and_wedge(
     offset_x -= wedged_x
     offset_x = max(offset_x, minimum_membrane[0])
 
-    return Moject((hou.Vector2(offset_x, offset_y), wedge_angle), messages)
+    return Moject((Vector2(offset_x, offset_y), wedge_angle), messages)
 
 
 def _calc_membrane_spec(

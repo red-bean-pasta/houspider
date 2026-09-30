@@ -182,7 +182,7 @@ def _get_pedipalp_param(
     base = pedipalp.input(0)
     front_coxa_length = (
         _get_front_coxa_socket_width(base.geometry())
-        * leg_params.coxa_width_length_ratios.y()
+        * leg_params.coxa_length_ratio
     )
 
     coxa_width_length = _get_pedipalp_coxa_width_length(
@@ -190,19 +190,25 @@ def _get_pedipalp_param(
         front_coxa_length,
         params.pedipalp_coxa_length,
     )
+    width, length = coxa_width_length
     length_ratios = tuple(params.pedipalp_segment_length_ratios)
     max_segment_yaws = tuple(leg_params.max_yaw_angles)[1:len(length_ratios) + 1]
     min_segment_flexes = tuple(leg_params.min_flex_angles)[1:len(length_ratios) + 1]
 
+    num_segments = len(length_ratios) + 1
+    segment_sections = tuple(
+        ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))
+        for _ in range(num_segments)
+    )
+
     return LimbParam.from_specs(
-        coxa_width_length=coxa_width_length,
+        socket_size=(width, width),
+        coxa_length=length,
+        segment_sections=segment_sections,
         length_ratios=length_ratios,
         max_segment_yaws=max_segment_yaws,
         min_segment_flexes=min_segment_flexes,
-        coxa_trochanter_height_ratio=leg_params.coxa_trochanter_height_ratio,
-        other_segment_height_ratio=leg_params.other_segment_height_ratio,
         spine_ratio=control_params.segment_spine_ratio,
-        shrink_ratios=control_params.joint_shrink_ratio,
         minimum_membrane=control_params.joint_clearance_limits,
         support_loop_ratio=control_params.joint_support_loop_ratio,
         tarsus_wedge_angle=leg_params.tarsus_wedge_angle,

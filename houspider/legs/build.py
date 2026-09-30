@@ -1,4 +1,5 @@
 import hou
+from houkit.formatter import title_case
 
 from houkit.noder import (
     add_fuse,
@@ -9,6 +10,7 @@ from houkit.noder import (
 )
 from houkit.parameterizer import add_float_parm
 
+from ..attributes import LegSegment
 from houspider.helper import rename_left_ids_node
 from . import topology
 
@@ -39,12 +41,12 @@ def build(
 def _add_parameters(legs: hou.OpNode) -> None:
     add_float_parm(
         legs,
-        "coxa_width_length_ratios",
-        2,
-        (0.75, 1.2),
+        "coxa_length_ratio",
+        1,
+        1.2,
         (0.0, None),
-        label="Coxa Width Length",
-        help="X scales coxa width and Y scales coxa length from the front socket width.",
+        label="Coxa Length",
+        help="Front coxa length evaluated against front socket width.",
     )
     add_float_parm(
         legs,
@@ -56,24 +58,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
         label="Segment Lengths",
         help="One length ratio per post-coxa segment, measured against front coxa length.",
     )
-    add_float_parm(
-        legs,
-        "coxa_trochanter_height_ratio",
-        1,
-        0.63,
-        (0.0, None),
-        label="Coxa-Trochanter Height",
-        help="Height-to-width proportion of the trochanter segment.",
-    )
-    add_float_parm(
-        legs,
-        "other_segment_height_ratio",
-        1,
-        1.15,
-        (0.0, None),
-        label="Other Segment Height",
-        help="Height-to-width proportion of post-trochanter segments.",
-    )
+    _add_segment_parameters(legs)
     add_float_parm(
         legs,
         "tarsus_wedge_angle",
@@ -143,6 +128,47 @@ def _add_parameters(legs: hou.OpNode) -> None:
     )
 
 
+def _add_segment_parameters(legs: hou.OpNode) -> None:
+    ptg = legs.parmTemplateGroup()
+    folder = hou.FolderParmTemplate(
+        "segments",
+        "Segments",
+        folder_type=hou.folderType.Collapsible,
+    )
+    segment_specs = (
+        (LegSegment.COXA, ((0.0, 1.0, 1.0), (1.0, 0.75, 1.2))),
+        (LegSegment.TROCHANTER, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
+        (LegSegment.FEMUR, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
+        (LegSegment.PATELLA, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
+        (LegSegment.TIBIA, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
+        (LegSegment.METATARSUS, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
+        (LegSegment.TARSUS, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
+    )
+    for name, _ in segment_specs:
+        label = title_case(name)
+        mp = hou.FolderParmTemplate(
+            f"{name}_sections",
+            label,
+            folder_type=hou.folderType.MultiparmBlock,
+        )
+        mp.setDefaultValue(2)
+        vec_template = hou.FloatParmTemplate(
+            f"{name}_section#",
+            "Section #",
+            3,
+            default_value=(0.0, 1.0, 1.0),
+        )
+        mp.setParmTemplates([vec_template])
+        folder.addParmTemplate(mp)
+
+    ptg.append(folder)
+    legs.setParmTemplateGroup(ptg)
+
+    for name, defaults in segment_specs:
+        for idx, val in enumerate(defaults):
+            legs.parmTuple(f"{name}_section{idx + 1}").set(val)
+
+
 def _add_controls(parent: hou.SopNode) -> hou.SopNode:
     control = parent.createNode("null", "CONTROL")
     add_float_parm(
@@ -162,16 +188,6 @@ def _add_controls(parent: hou.SopNode) -> hou.SopNode:
         (0.0, None),
         label="Segment Spine Ratio",
         help="Moves the segment’s fullest area between its upper and lower sides.",
-    )
-    add_float_parm(
-        control,
-        "joint_shrink_ratio",
-        2,
-        (0.98, 0.875),
-        (0.0, None),
-        hou.parmNamingScheme.Base1,
-        label="Joint Shrink Ratio",
-        help="X sets taper along a segment; Y sets the size change at each joint.",
     )
     add_float_parm(
         control,
