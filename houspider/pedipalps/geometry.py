@@ -1,3 +1,5 @@
+from typing import Any
+
 import hou
 from houkit.attributer import points_start_with
 from houkit.geomath import rotation_to
@@ -7,11 +9,12 @@ from houkit.parameterizer import get_parms
 from houkit.topologies.basic import remove_unused_points
 from houkit.topology import fill_face
 
-from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
-from ..helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
-from ..segments.models import LimbAttributes, LimbParam
-from ..segments.build import build_segment_bases
 from .attributes import Region, pedipalpcoxabuffer, pedipalpmembrane, pedipalpsegment
+from ..bases.attributes import basemaxillamembrane
+from ..helper import add_id_point, points_from_geo, positions_from_geo, prims_by_attr, set_point_id
+from ..legs.geometry import get_front_coxa_socket_width, get_segment_sections
+from ..segments.build import build_segment_bases
+from ..segments.models import LimbAttributes, LimbParam
 
 
 def remove_noise_points(
@@ -181,29 +184,21 @@ def _get_pedipalp_param(
 
     base = pedipalp.input(0)
     front_coxa_length = (
-        _get_front_coxa_socket_width(base.geometry())
+        get_front_coxa_socket_width(base.geometry())
         * leg_params.coxa_length_ratio
     )
+    pedipalp_coxa_length = front_coxa_length * params.pedipalp_coxa_length
+    socket_size = get_pedipalp_socket_size(geo)
 
-    coxa_width_length = _get_pedipalp_coxa_width_length(
-        geo,
-        front_coxa_length,
-        params.pedipalp_coxa_length,
-    )
-    width, length = coxa_width_length
     length_ratios = tuple(params.pedipalp_segment_length_ratios)
-    max_segment_yaws = tuple(leg_params.max_yaw_angles)[1:len(length_ratios) + 1]
-    min_segment_flexes = tuple(leg_params.min_flex_angles)[1:len(length_ratios) + 1]
+    segment_sections = _get_pedipalp_segment_sections(legs)
 
-    num_segments = len(length_ratios) + 1
-    segment_sections = tuple(
-        ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))
-        for _ in range(num_segments)
-    )
+    max_segment_yaws = _remove_metatarsus(tuple(leg_params.max_yaw_angles))[1:]
+    min_segment_flexes = _remove_metatarsus(tuple(leg_params.min_flex_angles))[1:]
 
     return LimbParam.from_specs(
-        socket_size=(width, width),
-        coxa_length=length,
+        socket_size=socket_size,
+        coxa_length=pedipalp_coxa_length,
         segment_sections=segment_sections,
         length_ratios=length_ratios,
         max_segment_yaws=max_segment_yaws,
@@ -214,15 +209,27 @@ def _get_pedipalp_param(
         tarsus_wedge_angle=leg_params.tarsus_wedge_angle,
     )
 
-def _get_pedipalp_coxa_width_length(
-    geo: hou.Geometry,
-    front_coxa_length: float,
-    pedipalp_coxa_length: float,
-) -> tuple[float, float]:
-    m3, m4 = positions_from_geo(geo, basemaxillamembrane(3), basemaxillamembrane(4))
-    width = m3.distanceTo(m4)
-    length = front_coxa_length * pedipalp_coxa_length
-    return width, length
+
+def _get_pedipalp_segment_sections(
+    legs: hou.OpNode,
+) -> tuple[tuple[tuple[float, float, float], ...], ...]:
+    leg_sections = get_segment_sections(legs)
+    return _remove_metatarsus(leg_sections)
+
+
+def _remove_metatarsus(target: Any) -> Any:
+    return target[:5] + target[6:]
+
+
+def get_pedipalp_socket_size(geo: hou.Geometry) -> tuple[float, float]:
+    m1, m3, m4 = positions_from_geo(
+        geo,
+        basemaxillamembrane(1),
+        basemaxillamembrane(3),
+        basemaxillamembrane(4),
+    )
+    return m3.distanceTo(m4), m3.distanceTo(m1)
+
 
 def _get_pedipalp_points(
     geo: hou.Geometry,
@@ -246,16 +253,6 @@ def _get_legs_node(node: hou.SopNode) -> hou.SopNode:
     legs = get_parent(node).input(1)
     assert legs is not None, "Expected legs as pedipalps input 1"
     return legs
-
-
-def _get_front_coxa_socket_width(geo: hou.Geometry) -> float:
-    pos_top_sz, pos_top_bz = points_from_geo(
-        geo,
-        basecoxamemebrane(1, 4),
-        basecoxamemebrane(1, 3),
-    )
-    return (pos_top_bz.position() - pos_top_sz.position()).length()
-
 
 
 def _add_base_trapezoid(
@@ -289,6 +286,7 @@ def _add_base_trapezoid(
     fill_face([m1, m2, p3, p4], reverse_order=True)
 
     return height
+
 
 def _calculate_base_trapezoid_points(
     node: hou.SopNode,

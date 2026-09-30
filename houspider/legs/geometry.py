@@ -106,7 +106,7 @@ def _get_leg_param(
         socket_size = (front_socket_width * width_ratio, front_socket_height * width_ratio)
         coxa_length = front_coxa_length * length_ratio
 
-    segment_sections = _get_segment_sections(parent)
+    segment_sections = get_segment_sections(parent)
 
     return LimbParam.from_specs(
         socket_size=socket_size,
@@ -122,7 +122,7 @@ def _get_leg_param(
     )
 
 
-def _get_segment_sections(
+def get_segment_sections(
     node: hou.OpNode,
 ) -> tuple[tuple[tuple[float, float, float], ...], ...]:
     all_sections = []
