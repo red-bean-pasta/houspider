@@ -118,7 +118,7 @@ def _get_leg_param(
         max_segment_yaws=tuple(params.max_yaw_angles)[1:],
         min_segment_flexes=tuple(params.min_flex_angles)[1:],
         spine_ratio=control_params.segment_spine_ratio,
-        minimum_membrane=control_params.joint_clearance_limits,
+        joint_clearance_limits=tuple(control_params.joint_clearance_limits),
         support_loop_ratio=control_params.joint_support_loop_ratio,
         tarsus_wedge_angle=params.tarsus_wedge_angle,
     )
@@ -292,7 +292,7 @@ def _build_coxa_socket_faces(
 
     # Front side (-Z): split into 3 quads by (mid_u, mid_b) and (b_start_u1, b_start_u1)
     fill_face([su1, sb1, mid_b, mid_u])
-    fill_face([mid_u, mid_b, b_start_b1, b_start_u1])
+    fill_face([mid_u, mid_b, b_start_b1, b_start_b1])
     fill_face([b_start_u1, b_start_b1, start_b1, start_u1])
 
     buffer_loop = [b_start_b1, b_start_b2, b_start_u2, b_start_u1]

@@ -29,13 +29,19 @@ class LimbParam:
     segment_sections: tuple[tuple[tuple[float, float, float], ...], ...]
 
     yaw_flex_specs: tuple[tuple[float, float], ...]
-    minimum_membrane: tuple[float, float] = (1.0, 5.0)
+    joint_clearance_limits: tuple[float, float, float] = (1.0, 5.0, 45.0)
 
     spine_ratio: float = 0.5
     support_loop_ratio: float = 0.015
     tarsus_wedge_angle: float = 45.0
 
     def __post_init__(self) -> None:
+        if len(self.joint_clearance_limits) == 2:
+            self.joint_clearance_limits = (
+                self.joint_clearance_limits[0],
+                self.joint_clearance_limits[1],
+                45.0,
+            )
         assert (
             len(self.length_ratios)
             == len(self.yaw_flex_specs)
@@ -70,6 +76,7 @@ class LimbParam:
         max_segment_yaws: tuple[float, ...] | list[float],
         min_segment_flexes: tuple[float, ...] | list[float],
         segment_sections: tuple[tuple[tuple[float, float, float], ...], ...] = (),
+        joint_clearance_limits: tuple[float, ...] = (1.0, 5.0, 45.0),
         **kwargs,
     ) -> Self:
         assert len(max_segment_yaws) == len(min_segment_flexes), (
@@ -78,6 +85,8 @@ class LimbParam:
         assert len(length_ratios) == len(max_segment_yaws), (
             f"Length mismatch: length_ratios ({len(length_ratios)}) != max_segment_yaws ({len(max_segment_yaws)})"
         )
+        if "minimum_membrane" in kwargs:
+            joint_clearance_limits = kwargs.pop("minimum_membrane")
         segment_specs = tuple(zip(max_segment_yaws, min_segment_flexes))
         return cls(
             socket_size=socket_size,
@@ -85,5 +94,6 @@ class LimbParam:
             length_ratios=length_ratios,
             yaw_flex_specs=segment_specs,
             segment_sections=segment_sections,
+            joint_clearance_limits=tuple(joint_clearance_limits),
             **kwargs,
         )

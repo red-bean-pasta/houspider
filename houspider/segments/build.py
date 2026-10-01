@@ -5,6 +5,7 @@ from . import membrane
 from .attributing import attribute_segment_bases
 from .models import LimbParam, LimbAttributes
 from .segment import build_segment_tubes, inset_segment_thickness, add_segment_loop_cuts
+from .validation import validate_segment_loops
 
 
 def build_segment_bases(
@@ -16,6 +17,7 @@ def build_segment_bases(
     cube_pts, messages = build_segment_tubes(geo, param)
     thickness_pts = inset_segment_thickness(geo, cube_pts, param.support_loop_ratio)
     seg_pts = add_segment_loop_cuts(geo, cube_pts, param.support_loop_ratio)
+    messages.extend(validate_segment_loops(seg_pts))
     mem_pts = membrane.fill_membranes(geo, thickness_pts)
     all_mem_pts = membrane.add_membrane_loop_cuts(
         geo,
@@ -28,4 +30,3 @@ def build_segment_bases(
 
     attribute_segment_bases(geo, attributes, seg_pts, thickness_pts, all_mem_pts)
     return Moject((seg_pts, thickness_pts, all_mem_pts), messages)
-

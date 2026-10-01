@@ -28,7 +28,7 @@ def get_cube_points(
             min_flex,
             param.spine_ratio,
             ((former_end_w, former_end_h), (latter_start_w, latter_start_h)),
-            param.minimum_membrane,
+            param.joint_clearance_limits,
         )
         messages.extend(seg_messages)
 
@@ -122,11 +122,19 @@ def _calc_segment_offset_and_wedge(
     min_flex: float,
     spine_ratio: float,
     segment_size: tuple[tuple[float, float], tuple[float, float]],
-    minimum_membrane: tuple[float, float],
+    joint_clearance_limits: tuple[float, float, float],
 ) -> Moject[tuple[Vector2, float]]:
     (former_width, former_height), (latter_width, latter_height) = segment_size
+    min_distance, min_wedge_deg, max_wedge_deg = joint_clearance_limits
 
-    (offset_x, wedge_angle), messages = _calc_membrane_spec(max_yaw, min_flex, segment_size, minimum_membrane)
+    (offset_x, wedge_angle), messages = _calc_membrane_spec(
+        max_yaw,
+        min_flex,
+        segment_size,
+        min_distance,
+        min_wedge_deg,
+        max_wedge_deg,
+    )
 
     # Keep the spine position (the point at spine_ratio from the top) aligned
     # across the joint, moving the latter segment in either vertical direction.
@@ -134,7 +142,7 @@ def _calc_segment_offset_and_wedge(
 
     wedged_x = abs(offset_y) * math.tan(math.radians(wedge_angle))
     offset_x -= wedged_x
-    offset_x = max(offset_x, minimum_membrane[0])
+    offset_x = max(offset_x, min_distance)
 
     return Moject((Vector2(offset_x, offset_y), wedge_angle), messages)
 
@@ -143,16 +151,15 @@ def _calc_membrane_spec(
     max_yaw_deg: float,
     min_flex_deg: float,
     segment_sections: tuple[tuple[float, float], tuple[float, float]],
-    min_return: tuple[float, float],
-    max_wedge_deg: float = 45,
+    min_distance: float,
+    min_wedge_deg: float,
+    max_wedge_deg: float,
     max_distance_ratio: float = 1.0,
 ) -> Moject[tuple[float, float]]:
     max_yaw_deg = abs(max_yaw_deg)
     assert min_flex_deg > 0
     assert max_yaw_deg <= 90
-
-    min_distance, min_angle = min_return
-    assert min_distance > 0 and 0 < min_angle < 45
+    assert min_distance > 0 and 0 <= min_wedge_deg < max_wedge_deg <= 90
 
     messages: list[str] = []
     (former_width, former_height), (latter_width, latter_height) = segment_sections
@@ -160,7 +167,7 @@ def _calc_membrane_spec(
     distance = max(distance, min_distance)
 
     if min_flex_deg >= 180:
-        angle = min_angle
+        angle = min_wedge_deg
         return Moject((distance, angle), messages)
 
     min_height = min(former_height, latter_height)
@@ -170,7 +177,7 @@ def _calc_membrane_spec(
         min_height,
     )
     messages.extend(wedge_messages)
-    angle = max(angle, min_return[1])
+    angle = max(angle, min_wedge_deg)
     limited_distance, limited_angle, limit_messages = _apply_membrane_spec_limits(
         distance,
         angle,

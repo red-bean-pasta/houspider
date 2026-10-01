@@ -192,12 +192,12 @@ def _add_controls(parent: hou.SopNode) -> hou.SopNode:
     add_float_parm(
         control,
         "joint_clearance_limits",
-        2,
-        (1.0, 5.0),
-        (0.0, 45.0),
+        3,
+        (1.0, 5.0, 45.0),
+        (0.0, 90.0),
         hou.parmNamingScheme.Base1,
         label="Joint Clearance Limits",
-        help="X is minimum membrane separation in scene units. Y is minimum flex angle; keep it strictly between 0° and 45°.",
+        help="1: Minimum membrane separation. 2: Minimum wedge angle. 3: Maximum wedge angle.",
     )
     add_float_parm(
         control,
