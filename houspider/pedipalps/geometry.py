@@ -183,11 +183,11 @@ def _get_pedipalp_param(
     control_params = get_parms(get_control(legs, "CONTROL"), use_tuple=False)
 
     base = pedipalp.input(0)
-    front_coxa_length = (
+    front_leg_coxa_length = (
         get_front_coxa_socket_width(base.geometry())
         * leg_params.coxa_length_ratio
     )
-    pedipalp_coxa_length = front_coxa_length * params.coxa_length
+    pedipalp_coxa_length = front_leg_coxa_length * params.coxa_length
     socket_size = get_pedipalp_socket_size(geo)
 
     length_ratios = tuple(params.segment_length_ratios)

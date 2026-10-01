@@ -1,4 +1,5 @@
 import math
+from typing import Any
 
 import hou
 from houkit.attributer import add_global_attrib, add_prim_attrib
@@ -40,6 +41,15 @@ def extrude_legs(
     node: hou.SopNode,
 ) -> None:
     geo = node.geometry()
+    add_prim_attrib(geo, "region", "")
+
+    parent = get_parent(node)
+    params = get_parms(parent, use_tuple=False)
+    control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
+
+    front_socket_size = (get_front_coxa_socket_width(geo), get_front_coxa_socket_height(geo))
+    front_coxa_length = front_socket_size[0] * params.coxa_length_ratio
+    segment_sections = get_segment_sections(parent)
 
     for i in range(4):
         leg_idx = i + 1
@@ -60,16 +70,21 @@ def extrude_legs(
             )
         )
 
-        # sz: small Z, bz: big Z
         pos_top_sz, pos_top_bz, pos_btm_sz, pos_btm_bz = points_to_positions(pts)
-
         top_mid = (pos_top_sz + pos_top_bz) / 2.0
         btm_mid = (pos_btm_sz + pos_btm_bz) / 2.0
         direction = hou.Vector3(top_mid.x() - btm_mid.x(), 0.0, top_mid.z() - btm_mid.z()).normalized()
         bottom_z_offset = (btm_mid - top_mid).dot(direction)
         origin = top_mid + direction * bottom_z_offset
 
-        param = _get_leg_param(node, i)
+        param = _get_leg_param(
+            params,
+            control_params,
+            front_socket_size,
+            front_coxa_length,
+            segment_sections,
+            i,
+        )
         attributes = _get_leg_attributes(leg_idx)
         (seg_pts, thickness_pts, mem_pts), warnings = build_segment_bases(geo, param, attributes)
         for w in warnings:
@@ -81,36 +96,23 @@ def extrude_legs(
 
         buffer_loop, pentagon_pts = _adjust_coxa(node, pts, mid_pts, seg_pts[:16])
         _attribute_coxa_buffer(leg_idx, buffer_loop, pentagon_pts)
-        geo.deletePoints(seg_pts[:4])
 
 
 def _get_leg_param(
-    node: hou.SopNode,
+    params: Any,
+    control_params: Any,
+    front_socket_size: tuple[float, float],
+    front_coxa_length: float,
+    segment_sections: tuple[tuple[tuple[float, float, float], ...], ...],
     leg_index: int,
 ) -> LimbParam:
-    geo = node.geometry()
-    parent = get_parent(node)
-    params = get_parms(parent, use_tuple=False)
-    control_params = get_parms(get_control(parent, "CONTROL"), use_tuple=False)
-
-    front_socket_width = get_front_coxa_socket_width(geo)
-    front_socket_height = get_front_coxa_socket_height(geo)
-    front_coxa_length = front_socket_width * params.coxa_length_ratio
-
-    if leg_index == 0:
-        socket_size = (front_socket_width, front_socket_height)
-        coxa_length = front_coxa_length
-    else:
-        width_ratio = params.leg_width_ratios[leg_index - 1]
-        length_ratio = params.leg_length_ratios[leg_index - 1]
-        socket_size = (front_socket_width * width_ratio, front_socket_height * width_ratio)
-        coxa_length = front_coxa_length * length_ratio
-
-    segment_sections = get_segment_sections(parent)
+    width_ratio = 1.0 if leg_index == 0 else params.leg_width_ratios[leg_index - 1]
+    length_ratio = 1.0 if leg_index == 0 else params.leg_length_ratios[leg_index - 1]
+    front_w, front_h = front_socket_size
 
     return LimbParam.from_specs(
-        socket_size=socket_size,
-        coxa_length=coxa_length,
+        socket_size=(front_w * width_ratio, front_h * width_ratio),
+        coxa_length=front_coxa_length * length_ratio,
         segment_sections=segment_sections,
         length_ratios=tuple(params.segment_length_ratios),
         max_segment_yaws=tuple(params.max_yaw_angles)[1:],
@@ -120,21 +122,6 @@ def _get_leg_param(
         support_loop_ratio=control_params.joint_support_loop_ratio,
         tarsus_wedge_angle=params.tarsus_wedge_angle,
     )
-
-
-def get_segment_sections(
-    node: hou.OpNode,
-) -> tuple[tuple[tuple[float, float, float], ...], ...]:
-    all_sections = []
-    for name in LegSegment:
-        sections_parm = node.parm(f"{name}_sections")
-        num_sections = sections_parm.eval()
-        sections = []
-        for i in range(num_sections):
-            parm_tuple = node.parmTuple(f"{name}_section{i + 1}")
-            sections.append(tuple(parm_tuple.eval()))
-        all_sections.append(tuple(sections))
-    return tuple(all_sections)
 
 
 def _get_leg_attributes(leg_index: int) -> LimbAttributes:
@@ -152,56 +139,57 @@ def _adjust_coxa(
     socket_midpoints: list[hou.Point],
     coxa_points: list[hou.Point],
 ) -> tuple[list[hou.Point], list[hou.Point]]:
-    assert len(coxa_points) == 16, f"Expected 16 coxa points, got {len(coxa_points)}"
+    assert len(coxa_points) >= 8 and len(coxa_points) % 4 == 0, (
+        f"Expected coxa_points length to be a multiple of 4 (>= 8), got {len(coxa_points)}"
+    )
     assert len(socket_points) == 4, f"Expected 4 socket points, got {len(socket_points)}"
     assert len(socket_midpoints) == 2, f"Expected 2 socket midpoints, got {len(socket_midpoints)}"
 
-    geo = node.geometry()
-    add_prim_attrib(geo, "region", "")
-
     coxa_start_pts = coxa_points[:4]
-    coxa_start_support_pts = coxa_points[4:8]
-    coxa_end_pts = coxa_points[12:16]
+    coxa_end_pts = coxa_points[-4:]
+    intermediate_pts = coxa_points[4:-4]
+
+    # Pre-compute parametric ratio t along nominal edges before skewing
+    intermediate_ratios: list[float] = []
+    for offset, pt in enumerate(intermediate_pts):
+        corner = offset % 4
+        p_start_nom = coxa_start_pts[corner].position()
+        p_end = coxa_end_pts[corner].position()
+        v_edge = p_end - p_start_nom
+        t = (pt.position() - p_start_nom).dot(v_edge) / v_edge.lengthSquared()
+        intermediate_ratios.append(t)
 
     control_params = get_parms(get_control(get_parent(node), "CONTROL"), use_tuple=False)
-    coxa_start_wedge_angle = control_params.coxa_start_wedge_angle
-    adjusted_support_positions = _get_adjusted_coxa_support_positions(
+    adjusted_start_positions = _get_adjusted_coxa_start_positions(
         socket_points,
         coxa_end_pts,
-        coxa_start_wedge_angle,
+        control_params.coxa_start_wedge_angle,
     )
-    for point, position in zip(coxa_start_support_pts, adjusted_support_positions):
+    for point, position in zip(coxa_start_pts, adjusted_start_positions):
         point.setPosition(position)
+
+    _update_coxa_intermediate_positions(
+        coxa_start_pts,
+        intermediate_pts,
+        coxa_end_pts,
+        intermediate_ratios,
+    )
 
     support_loop_ratio = control_params.joint_support_loop_ratio
     buffer_ratio = _get_coxa_buffer_ratio(
         socket_points,
         coxa_start_pts,
-        coxa_start_support_pts,
         support_loop_ratio,
     )
     return _build_coxa_socket_faces(
         socket_points,
         socket_midpoints,
-        coxa_start_support_pts,
+        coxa_start_pts,
         buffer_ratio,
     )
 
 
-def _attribute_coxa_buffer(
-    leg_idx: int,
-    buffer_loop: list[hou.Point],
-    pentagon_pts: list[hou.Point],
-) -> None:
-    for corner_offset, pt in enumerate(buffer_loop):
-        corner_idx = corner_offset + 1
-        set_point_id(pt, legsegment(leg_idx, 1, 2, corner_idx))
-
-    for k, pt in enumerate(pentagon_pts):
-        set_point_id(pt, legsegment(leg_idx, 1, "buffer", k + 1))
-
-
-def _get_adjusted_coxa_support_positions(
+def _get_adjusted_coxa_start_positions(
     socket_points: list[hou.Point],
     coxa_end_points: list[hou.Point],
     coxa_start_wedge_angle: float,
@@ -211,92 +199,118 @@ def _get_adjusted_coxa_support_positions(
     # pos_bb: base bottom (lb, rb), pos_bu: base upper (ru, lu)
     pos_bb1, pos_bb2, pos_bu2, pos_bu1 = points_to_positions(coxa_end_points)
 
-    pos_ab1 = _get_adjusted_bottom_coxa_position(pos_sb1, pos_bb1, coxa_start_wedge_angle)
-    pos_ab2 = _get_adjusted_bottom_coxa_position(pos_sb2, pos_bb2, coxa_start_wedge_angle)
-    pos_au1 = (pos_su1 + pos_bu1) * 0.5
-    pos_au2 = (pos_su2 + pos_bu2) * 0.5
+    pos_ab1, pos_au1 = _adjust_side_positions(pos_su1, pos_sb1, pos_bu1, pos_bb1, coxa_start_wedge_angle)
+    pos_ab2, pos_au2 = _adjust_side_positions(pos_su2, pos_sb2, pos_bu2, pos_bb2, coxa_start_wedge_angle)
     # Return ordered [lb, rb, ru, lu]
     return pos_ab1, pos_ab2, pos_au2, pos_au1
 
 
-def _get_adjusted_bottom_coxa_position(
-    socket_position: hou.Vector3,
-    base_position: hou.Vector3,
+def _adjust_side_positions(
+    pos_su: hou.Vector3,
+    pos_sb: hou.Vector3,
+    pos_bu: hou.Vector3,
+    pos_bb: hou.Vector3,
     wedge_angle: float,
-) -> hou.Vector3:
-    y_delta = abs(socket_position.y() - base_position.y())
-    xz_delta = math.sqrt(
-        (base_position.x() - socket_position.x()) ** 2
-        + (base_position.z() - socket_position.z()) ** 2
+) -> tuple[hou.Vector3, hou.Vector3]:
+    """Calculate adjusted (bottom, upper) positions for one side of coxa start section."""
+    y_delta = abs(pos_sb.y() - pos_bb.y())
+    xz_dist = math.hypot(pos_bb.x() - pos_sb.x(), pos_bb.z() - pos_sb.z())
+    ratio = y_delta * math.tan(math.radians(wedge_angle)) / xz_dist if xz_dist > 1e-6 else 0.5
+
+    pos_ab = hou.Vector3(
+        pos_sb.x() + (pos_bb.x() - pos_sb.x()) * ratio,
+        pos_bb.y(),
+        pos_sb.z() + (pos_bb.z() - pos_sb.z()) * ratio,
     )
-    ratio = (
-        y_delta * math.tan(math.radians(wedge_angle)) / xz_delta
-        if xz_delta > 1e-6 else
-        0.5
+    pos_au = hou.Vector3(
+        pos_su.x() + (pos_bu.x() - pos_su.x()) * ratio,
+        pos_bu.y(),
+        pos_su.z() + (pos_bu.z() - pos_su.z()) * ratio,
     )
-    return hou.Vector3(
-        socket_position.x() + (base_position.x() - socket_position.x()) * ratio,
-        base_position.y(),
-        socket_position.z() + (base_position.z() - socket_position.z()) * ratio,
-    )
+    return pos_ab, pos_au
+
+
+def _update_coxa_intermediate_positions(
+    start_pts: list[hou.Point],
+    intermediate_pts: list[hou.Point],
+    end_pts: list[hou.Point],
+    intermediate_ratios: list[float],
+) -> None:
+    for offset, (pt, t) in enumerate(zip(intermediate_pts, intermediate_ratios)):
+        corner = offset % 4
+        p_start = start_pts[corner].position()
+        p_end = end_pts[corner].position()
+        pt.setPosition(p_start * (1.0 - t) + p_end * t)
 
 
 def _get_coxa_buffer_ratio(
     socket_points: list[hou.Point],
     coxa_start_points: list[hou.Point],
-    support_points: list[hou.Point],
     support_loop_ratio: float,
 ) -> float:
     pos_su1, pos_su2, _, _ = points_to_positions(socket_points)
-    _, _, pos_au2, pos_au1 = points_to_positions(support_points)
+    _, _, pos_au2, pos_au1 = points_to_positions(coxa_start_points)
     coxa_width = coxa_start_points[0].position().distanceTo(coxa_start_points[1].position())
     cut_length = coxa_width * support_loop_ratio
     pos_su_mid = (pos_su1 + pos_su2) * 0.5
     pos_au_mid = (pos_au1 + pos_au2) * 0.5
-    dist_socket_to_support = pos_su_mid.distanceTo(pos_au_mid)
-    return 1.0 - cut_length / dist_socket_to_support
+    dist_socket_to_start = pos_su_mid.distanceTo(pos_au_mid)
+    return 1.0 - cut_length / dist_socket_to_start
 
 
 def _build_coxa_socket_faces(
     socket_points: list[hou.Point],
     socket_midpoints: list[hou.Point],
-    support_points: list[hou.Point],
+    start_points: list[hou.Point],
     buffer_ratio: float,
 ) -> tuple[list[hou.Point], list[hou.Point]]:
     # su: socket upper, sb: socket bottom
     su1, su2, sb1, sb2 = socket_points
     # s_mu, s_mb: socket midpoint upper / bottom
     s_mu, s_mb = socket_midpoints
-    # eb: support bottom (lb, rb), eu: support upper (ru, lu)
-    eb1, eb2, eu2, eu1 = support_points
+    # start_b: start bottom (lb, rb), start_u: start upper (ru, lu)
+    start_b1, start_b2, start_u2, start_u1 = start_points
 
-    # Upper pentagon: su1, s_mu, su2, eu2, eu1
-    mid_u, u_inner, b_eu2, b_eu1 = fill_pentagon_with_buffer(
-        [su1, s_mu, su2, eu2, eu1],
-        (eu2, eu1),
+    # Upper pentagon: su1, s_mu, su2, start_u2, start_u1
+    mid_u, u_inner, b_start_u2, b_start_u1 = fill_pentagon_with_buffer(
+        [su1, s_mu, su2, start_u2, start_u1],
+        (start_u2, start_u1),
         buffer_ratio,
-        (su1, eu1),
+        (su1, start_u1),
     )
-    # Bottom pentagon: sb2, s_mb, sb1, eb1, eb2
-    mid_b, b_inner, b_eb1, b_eb2 = fill_pentagon_with_buffer(
-        [sb2, s_mb, sb1, eb1, eb2],
-        (eb1, eb2),
+    # Bottom pentagon: sb2, s_mb, sb1, start_b1, start_b2
+    mid_b, b_inner, b_start_b1, b_start_b2 = fill_pentagon_with_buffer(
+        [sb2, s_mb, sb1, start_b1, start_b2],
+        (start_b1, start_b2),
         buffer_ratio,
-        (sb1, eb1),
+        (sb1, start_b1),
     )
 
-    # Back side (+Z): split into 2 quads by (b_eu2, b_eb2)
-    fill_face([sb2, su2, b_eu2, b_eb2])
-    fill_face([b_eb2, b_eu2, eu2, eb2])
+    # Back side (+Z): split into 2 quads by (b_start_u2, b_start_b2)
+    fill_face([sb2, su2, b_start_u2, b_start_b2])
+    fill_face([b_start_b2, b_start_u2, start_u2, start_b2])
 
-    # Front side (-Z): split into 3 quads by (mid_u, mid_b) and (b_eu1, b_eu1)
+    # Front side (-Z): split into 3 quads by (mid_u, mid_b) and (b_start_u1, b_start_u1)
     fill_face([su1, sb1, mid_b, mid_u])
-    fill_face([mid_u, mid_b, b_eb1, b_eu1])
-    fill_face([b_eu1, b_eb1, eb1, eu1])
+    fill_face([mid_u, mid_b, b_start_b1, b_start_u1])
+    fill_face([b_start_u1, b_start_b1, start_b1, start_u1])
 
-    buffer_loop = [b_eb1, b_eb2, b_eu2, b_eu1]
+    buffer_loop = [b_start_b1, b_start_b2, b_start_u2, b_start_u1]
     pentagon_pts = [mid_u, u_inner, mid_b, b_inner]
     return buffer_loop, pentagon_pts
+
+
+def _attribute_coxa_buffer(
+    leg_idx: int,
+    buffer_loop: list[hou.Point],
+    pentagon_pts: list[hou.Point],
+) -> None:
+    for corner_offset, pt in enumerate(buffer_loop):
+        corner_idx = corner_offset + 1
+        set_point_id(pt, legsegment(leg_idx, 1, 1, corner_idx))
+
+    for k, pt in enumerate(pentagon_pts):
+        set_point_id(pt, legsegment(leg_idx, 1, "buffer", k + 1))
 
 
 def get_front_coxa_socket_width(geo: hou.Geometry) -> float:
@@ -315,3 +329,18 @@ def get_front_coxa_socket_height(geo: hou.Geometry) -> float:
         basecoxamembranemiddle(1, 1),
     )
     return (pos_top_sz.position() - pos_btm_sz.position()).length()
+
+
+def get_segment_sections(
+    node: hou.OpNode,
+) -> tuple[tuple[tuple[float, float, float], ...], ...]:
+    all_sections = []
+    for name in LegSegment:
+        sections_parm = node.parm(f"{name}_sections")
+        num_sections = sections_parm.eval()
+        sections = []
+        for i in range(num_sections):
+            parm_tuple = node.parmTuple(f"{name}_section{i + 1}")
+            sections.append(tuple(parm_tuple.eval()))
+        all_sections.append(tuple(sections))
+    return tuple(all_sections)
