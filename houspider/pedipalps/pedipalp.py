@@ -1,4 +1,5 @@
-from typing import Any
+from collections.abc import Sequence
+from typing import TypeVar
 
 import hou
 from houkit.geomath import rotation_to
@@ -16,6 +17,7 @@ from .attributes import (
     pedipalpsegmentsupport,
 )
 from ..bases.attributes import basemaxillamembrane
+from ..attributes import LegSegment, PedipalpSegment
 from ..helper import points_from_geo, prims_by_attr, set_point_id
 from ..legs.attributes import get_segment_sections
 from ..legs.socket import get_front_coxa_socket_width
@@ -135,10 +137,10 @@ def _get_pedipalp_param(
     socket_size = get_pedipalp_socket_size(geo)
 
     length_ratios = tuple(params.segment_length_ratios)
-    segment_sections = _get_pedipalp_segment_sections(legs)
+    segment_sections = _select_pedipalp_segments(get_segment_sections(legs))
 
-    max_segment_yaws = _remove_metatarsus(tuple(leg_params.max_yaw_angles))[1:]
-    min_segment_flexes = _remove_metatarsus(tuple(leg_params.min_flex_angles))[1:]
+    max_segment_yaws = _select_pedipalp_segments(tuple(leg_params.max_yaw_angles))[1:]
+    min_segment_flexes = _select_pedipalp_segments(tuple(leg_params.min_flex_angles))[1:]
 
     return LimbParam.from_specs(
         socket_size=socket_size,
@@ -154,15 +156,15 @@ def _get_pedipalp_param(
     )
 
 
-def _get_pedipalp_segment_sections(
-    legs: hou.OpNode,
-) -> tuple[tuple[tuple[float, float, float], ...], ...]:
-    leg_sections = get_segment_sections(legs)
-    return _remove_metatarsus(leg_sections)
+_T = TypeVar("_T")
 
 
-def _remove_metatarsus(target: Any) -> Any:
-    return target[:5] + target[6:]
+def _select_pedipalp_segments(values: Sequence[_T]) -> tuple[_T, ...]:
+    pedipalp_names = {segment.value for segment in PedipalpSegment}
+    return tuple(
+        value for segment, value in zip(LegSegment, values, strict=True)
+        if segment.value in pedipalp_names
+    )
 
 
 def _get_pedipalp_points(
@@ -179,7 +181,7 @@ def _get_pedipalp_points(
         for pt in prim.points()
     }
     if not pts:
-        return list(geo.points())
+        raise ValueError("No pedipalp points found by region")
     return list(pts)
 
 

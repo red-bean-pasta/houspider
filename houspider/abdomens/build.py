@@ -20,7 +20,7 @@ def build(spider_node: hou.OpNode, prosoma: hou.SopNode) -> hou.SopNode:
     _add_controls(abdomen)
 
     source = abdomen.indirectInputs()[0]
-    prosoma_info = sopify(abdomen, source, topology.prepare_prosoma_info)
+    prosoma_info = sopify_chain(abdomen, source, topology.prepare_prosoma_info)
     width_frame = sopify(abdomen, prosoma_info, topology.add_width_frame)
     height_frame = sopify(abdomen, prosoma_info, topology.add_height_frame)
 
@@ -50,7 +50,7 @@ def _add_parameters(abdomen: hou.SopNode) -> None:
         (1.2, 1.0, 1.2),
         (0.0, None),
         label="Width / Height / Length",
-        help="X, Y, and Z scale abdomen width, height, and length against the prosoma.",
+        help="Abdomen width, height, and length against the prosoma.",
     )
     add_float_parm(
         abdomen,

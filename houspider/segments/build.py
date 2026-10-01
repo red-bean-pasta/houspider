@@ -23,7 +23,6 @@ def build_segment_bases(
     mem_pts = membrane.fill_membranes(geo, thickness_pts)
     all_mem_pts = membrane.add_membrane_loop_cuts(
         geo,
-        segment_tubes,
         thickness_pts,
         mem_pts,
         param.support_loop_ratio,

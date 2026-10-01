@@ -30,24 +30,19 @@ def fill_membranes(
 
 def add_membrane_loop_cuts(
     geo: hou.Geometry,
-    cube_pts: list[hou.Point] | list[list[hou.Point]],
     thickness_pts: list[hou.Point],
     mem_pts: list[hou.Point],
     support_loop_ratio: float,
 ) -> list[hou.Point]:
     """Add support loop cuts near former and latter boundaries of each joint membrane.
 
-    Returns all_mem_pts containing up to 12 points per joint (3 loops of 4 points):
+    Returns all_mem_pts containing 12 points per joint (3 loops of 4 points):
       - 4 points: former support loop (loop index 1)
       - 4 points: middle loop (loop index 2)
       - 4 points: latter support loop (loop index 3)
     All loops preserve corner ordering [lb, rb, ru, lu].
     """
     assert len(thickness_pts) % 8 == 0, f"Expected thickness_pts length to be a multiple of 8, got {len(thickness_pts)}"
-    first_loop = cube_pts[0] if isinstance(cube_pts[0], list) else cube_pts
-    coxa_width = first_loop[0].position().distanceTo(first_loop[1].position())
-    cut_length = coxa_width * support_loop_ratio
-
     num_joints = len(thickness_pts) // 8
     all_mem_pts: list[hou.Point] = []
 
@@ -56,16 +51,8 @@ def add_membrane_loop_cuts(
         latter_start = thickness_pts[i * 8 + 4:(i + 1) * 8]
         mid_pts = mem_pts[i * 4:(i + 1) * 4]
 
-        # Use distance between upper corners to determine if cuts fit
-        fu_corner = former_end[2]
-        lu_corner = latter_start[2]
-        half_width = fu_corner.position().distanceTo(lu_corner.position()) * 0.5
-        if cut_length >= half_width:
-            all_mem_pts.extend(mid_pts)
-            continue
-
-        former_cut = loop_cut_tube(geo, former_end, mid_pts, cut_length)
-        latter_cut = loop_cut_tube(geo, latter_start, mid_pts, cut_length)
+        former_cut = loop_cut_tube(geo, former_end, mid_pts, support_loop_ratio)
+        latter_cut = loop_cut_tube(geo, latter_start, mid_pts, support_loop_ratio)
         all_mem_pts.extend([
             *former_cut,
             *mid_pts,

@@ -90,9 +90,6 @@ def add_segment_loop_cuts(
       - 4 points: end loop (edge -1)
     All loops preserve corner ordering [lb, rb, ru, lu].
     """
-    coxa_width = segment_tubes[0][0].position().distanceTo(segment_tubes[0][1].position())
-    cut_length = coxa_width * support_loop_ratio
-
     all_seg_tubes: list[list[Point]] = []
 
     for cur_pts in segment_tubes:
@@ -101,9 +98,9 @@ def add_segment_loop_cuts(
 
         second_loop = cur_pts[4:8]
         penultimate_loop = cur_pts[-8:-4]
-        start_cut = loop_cut_tube(geo, start_pts, second_loop, cut_length)
+        start_cut = loop_cut_tube(geo, start_pts, second_loop, support_loop_ratio)
         cut_source = start_cut if len(cur_pts) == 8 else penultimate_loop
-        end_cut = loop_cut_tube(geo, end_pts, cut_source, cut_length)
+        end_cut = loop_cut_tube(geo, end_pts, cut_source, support_loop_ratio)
         all_seg_tubes.append([
             *start_pts,
             *start_cut,

@@ -24,7 +24,6 @@ def adjust_coxa(
     coxa_end_pts = coxa_points[-4:]
 
     intermediate_ratios = compute_intermediate_ratios(coxa_points)
-
     control_params = get_parms(get_control(get_parent(node), "CONTROL"), use_tuple=False)
     adjusted_start_positions = _get_adjusted_coxa_start_positions(
         socket_points,
@@ -33,7 +32,6 @@ def adjust_coxa(
     )
     for point, position in zip(coxa_start_pts, adjusted_start_positions):
         point.setPosition(position)
-
     update_intermediate_positions(coxa_points, intermediate_ratios)
 
     support_loop_ratio = control_params.joint_support_loop_ratio
@@ -151,9 +149,9 @@ def _build_coxa_socket_faces(
     fill_face([sb2, su2, b_start_u2, b_start_b2])
     fill_face([b_start_b2, b_start_u2, start_u2, start_b2])
 
-    # Front side (-Z): split into 3 quads by (mid_u, mid_b) and (b_start_u1, b_start_u1)
+    # Front side (-Z): split into 3 quads by (mid_u, mid_b) and (b_start_u1, b_start_b1)
     fill_face([su1, sb1, mid_b, mid_u])
-    fill_face([mid_u, mid_b, b_start_b1, b_start_b1])
+    fill_face([mid_u, mid_b, b_start_b1, b_start_u1])
     fill_face([b_start_u1, b_start_b1, start_b1, start_u1])
 
     buffer_loop = [b_start_b1, b_start_b2, b_start_u2, b_start_u1]

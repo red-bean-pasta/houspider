@@ -214,6 +214,30 @@ def _calculate_base_trapezoid_points(
     pos_es4: hou.Vector3,
     pos_mid_bottom: hou.Vector3,
 ) -> tuple[hou.Vector3, hou.Vector3, float]:
+    u, n_plane, length = _get_base_trapezoid_frame(node, pos_m1, pos_m2)
+
+    dir_line = pos_m1 - pos_es4
+    denom = dir_line.dot(n_plane)
+    if abs(denom) <= 1e-6:
+        raise ValueError("Coxa trapezoid line is parallel to its target plane")
+    t = (pos_m1 - pos_cb).dot(n_plane) / denom
+    pos_pp1 = pos_cb + dir_line * t
+
+    offset_pp = (pos_pp1 - pos_m1).dot(u)
+    pos_pp2 = pos_pp1 + u * (length - 2.0 * offset_pp)
+    pos_p4, pos_p3 = _project_trapezoid_to_bottom(
+        pos_pp1, pos_pp2, pos_cb, pos_es4, pos_m1, pos_mid_bottom,
+    )
+    offset = (pos_p4 - pos_m1).dot(u)
+    height = (pos_p4 - pos_m1 - u * offset).length()
+    return pos_p4, pos_p3, height
+
+
+def _get_base_trapezoid_frame(
+    node: hou.SopNode,
+    pos_m1: hou.Vector3,
+    pos_m2: hou.Vector3,
+) -> tuple[hou.Vector3, hou.Vector3, float]:
     geo = node.geometry()
     legs = node.parent().input(1)
     wedge_angle = get_parms(get_control(legs, "CONTROL"), use_tuple=False).coxa_start_wedge_angle
@@ -232,15 +256,17 @@ def _calculate_base_trapezoid_points(
     v = n.cross(u).normalized()
     if v.y() > 0.0:
         v = -v
-    n_plane = u.cross(v).normalized()
+    return u, u.cross(v).normalized(), length
 
-    dir_line = pos_m1 - pos_es4
-    denom = dir_line.dot(n_plane)
-    t = (pos_m1 - pos_cb).dot(n_plane) / denom
-    pos_pp1 = pos_cb + dir_line * t
 
-    offset_pp = (pos_pp1 - pos_m1).dot(u)
-    pos_pp2 = pos_pp1 + u * (length - 2.0 * offset_pp)
+def _project_trapezoid_to_bottom(
+    pos_pp1: hou.Vector3,
+    pos_pp2: hou.Vector3,
+    pos_cb: hou.Vector3,
+    pos_es4: hou.Vector3,
+    pos_m1: hou.Vector3,
+    pos_mid_bottom: hou.Vector3,
+) -> tuple[hou.Vector3, hou.Vector3]:
     mid_pp = (pos_pp1 + pos_pp2) * 0.5
 
     n_bottom_plane = (pos_cb - pos_es4).cross(pos_m1 - pos_es4).normalized()
@@ -250,10 +276,7 @@ def _calculate_base_trapezoid_points(
     pos_p4 = pos_pp1 + offset_vec
     pos_p3 = pos_pp2 + offset_vec
 
-    offset = (pos_p4 - pos_m1).dot(u)
-    height = (pos_p4 - pos_m1 - u * offset).length()
-
-    return pos_p4, pos_p3, height
+    return pos_p4, pos_p3
 
 
 def _add_front_face_point(

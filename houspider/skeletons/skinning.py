@@ -1,4 +1,5 @@
 import hou
+from collections.abc import Callable
 from hou import OpNode, SopNode
 from houkit.noder import sopify
 
@@ -11,8 +12,8 @@ from .attributes import (
     leg_joint_name,
     pedipalp_joint_name,
 )
-from ..legs.attributes import legmembrane, legmembranemid, legsegment, legsegmentbuffer, legsegmentinset
-from ..pedipalps.attributes import pedipalpcoxabuffer, pedipalpmembrane, pedipalpmembranemid, pedipalpsegment, pedipalpsegmentinset
+from ..legs.attributes import legmembrane, legsegment, legsegmentbuffer, legsegmentinset
+from ..pedipalps.attributes import pedipalpcoxabuffer, pedipalpmembrane, pedipalpsegment, pedipalpsegmentinset
 
 
 def capture_skin(
@@ -109,37 +110,13 @@ def _skin_single_leg(
     joint_indices: list[int],
     weights: dict[int, list[tuple[int, float]]],
 ) -> None:
-    coxa_bone = joint_indices[0]
-    buffer_prefix = legsegmentbuffer(leg_idx, 1, "")
-    for pid, pt in id_to_point.items():
-        if pid.startswith(buffer_prefix):
-            weights[pt.number()] = [(coxa_bone, 1.0)]
-
-    for seg_idx, seg_bone in enumerate(joint_indices, start=1):
-        seg_prefix = legsegment(leg_idx, seg_idx)
-        for pid, pt in id_to_point.items():
-            if pid.startswith(seg_prefix) and not pid.startswith(buffer_prefix):
-                weights[pt.number()] = [(seg_bone, 1.0)]
-
-    for joint_idx in range(1, len(joint_indices)):
-        j_former = joint_indices[joint_idx - 1]
-        j_latter = joint_indices[joint_idx]
-
-        for corner_idx in (3, 4):
-            for loop_idx in (1, "mid", -1):
-                pid = legmembrane(leg_idx, joint_idx, loop_idx, corner_idx)
-                if pid in id_to_point:
-                    weights[id_to_point[pid].number()] = [(j_latter, 1.0)]
-
-        for corner_idx in (1, 2):
-            pts = [
-                id_to_point.get(legsegmentinset(leg_idx, joint_idx, -1, corner_idx)),
-                id_to_point.get(legmembrane(leg_idx, joint_idx, 1, corner_idx)),
-                id_to_point.get(legmembranemid(leg_idx, joint_idx, corner_idx)),
-                id_to_point.get(legmembrane(leg_idx, joint_idx, -1, corner_idx)),
-                id_to_point.get(legsegmentinset(leg_idx, joint_idx + 1, 1, corner_idx)),
-            ]
-            _skin_membrane_corner_line(pts, j_former, j_latter, weights)
+    _skin_single_limb(
+        id_to_point, joint_indices, weights,
+        legsegmentbuffer(leg_idx, 1, ""),
+        lambda seg: legsegment(leg_idx, seg),
+        lambda joint, loop, corner: legmembrane(leg_idx, joint, loop, corner),
+        lambda seg, direction, corner: legsegmentinset(leg_idx, seg, direction, corner),
+    )
 
 
 def _skin_single_pedipalp(
@@ -148,14 +125,31 @@ def _skin_single_pedipalp(
     joint_indices: list[int],
     weights: dict[int, list[tuple[int, float]]],
 ) -> None:
+    _skin_single_limb(
+        id_to_point, joint_indices, weights,
+        pedipalpcoxabuffer(side),
+        lambda seg: pedipalpsegment(side, seg),
+        lambda joint, loop, corner: pedipalpmembrane(side, joint, loop, corner),
+        lambda seg, direction, corner: pedipalpsegmentinset(side, seg, direction, corner),
+    )
+
+
+def _skin_single_limb(
+    id_to_point: dict[str, hou.Point],
+    joint_indices: list[int],
+    weights: dict[int, list[tuple[int, float]]],
+    buffer_prefix: str,
+    segment_id: Callable[[int], str],
+    membrane_id: Callable[[int, int | str, int], str],
+    inset_id: Callable[[int, int, int], str],
+) -> None:
     coxa_bone = joint_indices[0]
-    buffer_prefix = pedipalpcoxabuffer(side)
     for pid, pt in id_to_point.items():
         if pid.startswith(buffer_prefix):
             weights[pt.number()] = [(coxa_bone, 1.0)]
 
     for seg_idx, seg_bone in enumerate(joint_indices, start=1):
-        seg_prefix = pedipalpsegment(side, seg_idx)
+        seg_prefix = segment_id(seg_idx)
         for pid, pt in id_to_point.items():
             if pid.startswith(seg_prefix) and not pid.startswith(buffer_prefix):
                 weights[pt.number()] = [(seg_bone, 1.0)]
@@ -166,17 +160,17 @@ def _skin_single_pedipalp(
 
         for corner_idx in (3, 4):
             for loop_idx in (1, "mid", -1):
-                pid = pedipalpmembrane(side, joint_idx, loop_idx, corner_idx)
+                pid = membrane_id(joint_idx, loop_idx, corner_idx)
                 if pid in id_to_point:
                     weights[id_to_point[pid].number()] = [(j_latter, 1.0)]
 
         for corner_idx in (1, 2):
             pts = [
-                id_to_point.get(pedipalpsegmentinset(side, joint_idx, -1, corner_idx)),
-                id_to_point.get(pedipalpmembrane(side, joint_idx, 1, corner_idx)),
-                id_to_point.get(pedipalpmembranemid(side, joint_idx, corner_idx)),
-                id_to_point.get(pedipalpmembrane(side, joint_idx, -1, corner_idx)),
-                id_to_point.get(pedipalpsegmentinset(side, joint_idx + 1, 1, corner_idx)),
+                id_to_point.get(inset_id(joint_idx, -1, corner_idx)),
+                id_to_point.get(membrane_id(joint_idx, 1, corner_idx)),
+                id_to_point.get(membrane_id(joint_idx, "mid", corner_idx)),
+                id_to_point.get(membrane_id(joint_idx, -1, corner_idx)),
+                id_to_point.get(inset_id(joint_idx + 1, 1, corner_idx)),
             ]
             _skin_membrane_corner_line(pts, j_former, j_latter, weights)
 

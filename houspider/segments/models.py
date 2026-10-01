@@ -35,18 +35,21 @@ class LimbParam:
     tarsus_wedge_angle: float
 
     def __post_init__(self) -> None:
-        assert (
-            len(self.length_ratios)
-            == len(self.yaw_flex_specs)
-            == len(self.segment_sections) - 1
-        ), f"Length mismatch: length_ratios ({len(self.length_ratios)}), yaw_flex_specs ({len(self.yaw_flex_specs)} and segment_sections ({len(self.segment_sections)} does not match)"
+        if not (len(self.length_ratios) == len(self.yaw_flex_specs) == len(self.segment_sections) - 1):
+            raise ValueError("One length ratio and yaw/flex spec are required per post-coxa segment")
+        if self.coxa_length <= 0 or self.support_loop_ratio <= 0:
+            raise ValueError("Coxa length and support loop ratio must be positive")
+        if any(size <= 0 for size in self.socket_size) or any(ratio <= 0 for ratio in self.length_ratios):
+            raise ValueError("Socket dimensions and segment length ratios must be positive")
 
         segment_sections = []
         for sections in self.segment_sections:
             sections = sorted(sections, key=lambda section: section[0])
 
-            assert sections
-            assert all(section[0] >= 0 for section in sections)
+            if not sections or any(not 0 <= section[0] <= 1 for section in sections):
+                raise ValueError("Each segment needs sections with positions between 0 and 1")
+            if any(section[1] <= 0 or section[2] <= 0 for section in sections):
+                raise ValueError("Section width and height ratios must be positive")
 
             if sections[0][0] > 1e-5:
                 sections.insert(0, (0.0, *sections[0][1:]))
@@ -54,7 +57,8 @@ class LimbParam:
                 sections.append((1.0, *sections[-1][1:]))
 
             for i in range(len(sections) - 1):
-                assert sections[i + 1][0] - sections[i][0] > 1e-5, f"Duplicate section position detected at {sections[i][0]:.5f}"
+                if sections[i + 1][0] - sections[i][0] <= 1e-5:
+                    raise ValueError(f"Duplicate section position detected at {sections[i][0]:.5f}")
 
             segment_sections.append(tuple(sections))
 
@@ -74,8 +78,8 @@ class LimbParam:
         support_loop_ratio: float,
         tarsus_wedge_angle: float,
     ) -> Self:
-        assert len(max_segment_yaws) == len(min_segment_flexes), f"Spec mismatch: max_segment_yaws ({len(max_segment_yaws)}) != min_segment_flexes ({len(min_segment_flexes)})"
-        assert len(length_ratios) == len(max_segment_yaws), f"Length mismatch: length_ratios ({len(length_ratios)}) != max_segment_yaws ({len(max_segment_yaws)})"
+        if len(max_segment_yaws) != len(min_segment_flexes) or len(length_ratios) != len(max_segment_yaws):
+            raise ValueError("Length ratios, yaw angles, and flex angles must have equal lengths")
         segment_specs = tuple(zip(max_segment_yaws, min_segment_flexes))
         return cls(
             socket_size=socket_size,
