@@ -12,13 +12,13 @@ def build_segment_bases(
     geo: Geometry,
     param: LimbParam,
     attributes: LimbAttributes,
-) -> Moject[tuple[list[Point], list[Point], list[Point]]]:
+) -> Moject[tuple[list[list[Point]], list[Point], list[Point]]]:
     """Build and attribute segment tubes, thickness loops, and membranes for a limb."""
     segment_tubes, messages = build_segment_tubes(geo, param)
     thickness_pts = inset_segment_thickness(geo, segment_tubes, param.support_loop_ratio)
-    seg_pts = add_segment_loop_cuts(geo, segment_tubes, param.support_loop_ratio)
+    seg_tubes = add_segment_loop_cuts(geo, segment_tubes, param.support_loop_ratio)
 
-    messages.extend(validate_segment_loops(seg_pts))
+    messages.extend(validate_segment_loops(seg_tubes))
 
     mem_pts = membrane.fill_membranes(geo, thickness_pts)
     all_mem_pts = membrane.add_membrane_loop_cuts(
@@ -28,7 +28,7 @@ def build_segment_bases(
         mem_pts,
         param.support_loop_ratio,
     )
-    close_tarsus(seg_pts, param.tarsus_wedge_angle)
+    close_tarsus(seg_tubes[-1], param.tarsus_wedge_angle)
 
-    attribute_segment_bases(geo, attributes, seg_pts, thickness_pts, all_mem_pts)
-    return Moject((seg_pts, thickness_pts, all_mem_pts), messages)
+    attribute_segment_bases(geo, attributes, seg_tubes, thickness_pts, all_mem_pts)
+    return Moject((seg_tubes, thickness_pts, all_mem_pts), messages)

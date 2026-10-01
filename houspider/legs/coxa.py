@@ -7,7 +7,7 @@ from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_posi
 
 from ..helper import set_point_id
 from ..segments.helper import compute_intermediate_ratios, update_intermediate_positions
-from .attributes import legsegment
+from .attributes import legsegment, legsegmentinset, legsegmentbuffer
 
 
 def adjust_coxa(
@@ -57,10 +57,10 @@ def attribute_coxa_buffer(
 ) -> None:
     for corner_offset, pt in enumerate(buffer_loop):
         corner_idx = corner_offset + 1
-        set_point_id(pt, legsegment(leg_idx, 1, 1, corner_idx))
+        set_point_id(pt, legsegmentinset(leg_idx, 1, 1, corner_idx))
 
     for k, pt in enumerate(pentagon_pts):
-        set_point_id(pt, legsegment(leg_idx, 1, "buffer", k + 1))
+        set_point_id(pt, legsegmentbuffer(leg_idx, 1, k + 1))
 
 
 def _get_adjusted_coxa_start_positions(

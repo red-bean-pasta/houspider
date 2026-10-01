@@ -11,7 +11,15 @@ from ..bases.attributes import basecoxamemebrane, basecoxamembranemiddle
 from ..helper import points_from_geo
 from ..segments.build import build_segment_bases
 from ..segments.models import LimbAttributes, LimbParam
-from .attributes import Region, get_segment_sections, legmembrane, legsegment
+from .attributes import (
+    Region,
+    get_segment_sections,
+    legmembrane,
+    legsegmentedge,
+    legsegmentinset,
+    legsegmentmid,
+    legsegmentsupport,
+)
 from .coxa import adjust_coxa, attribute_coxa_buffer
 from .socket import get_front_coxa_socket_height, get_front_coxa_socket_width
 
@@ -66,13 +74,13 @@ def _extrude_single_leg(
     )
     attributes = _get_leg_attributes(leg_idx)
 
-    (seg_pts, thickness_pts, mem_pts), warnings = build_segment_bases(geo, param, attributes)
+    (seg_tubes, thickness_pts, mem_pts), warnings = build_segment_bases(geo, param, attributes)
     for w in warnings:
         node.addWarning(w)
 
-    _orient_leg_points(seg_pts + thickness_pts + mem_pts, origin, direction)
+    _orient_leg_points(seg_tubes, thickness_pts, mem_pts, origin, direction)
 
-    buffer_loop, pentagon_pts = adjust_coxa(node, pts, mid_pts, seg_pts[:16])
+    buffer_loop, pentagon_pts = adjust_coxa(node, pts, mid_pts, seg_tubes[0])
     attribute_coxa_buffer(leg_idx, buffer_loop, pentagon_pts)
 
 
@@ -107,12 +115,19 @@ def _get_leg_socket_frame(
 
 
 def _orient_leg_points(
-    points: list[hou.Point],
+    seg_tubes: list[list[hou.Point]],
+    thickness_pts: list[hou.Point],
+    mem_pts: list[hou.Point],
     origin: hou.Vector3,
     direction: hou.Vector3,
 ) -> None:
     q = rotation_to(hou.Vector3(0.0, 0.0, -1.0), direction)
-    for pt in points:
+    for seg in seg_tubes:
+        for pt in seg:
+            pt.setPosition(q.rotate(pt.position()) + origin)
+    for pt in thickness_pts:
+        pt.setPosition(q.rotate(pt.position()) + origin)
+    for pt in mem_pts:
         pt.setPosition(q.rotate(pt.position()) + origin)
 
 
@@ -146,6 +161,9 @@ def _get_leg_attributes(leg_index: int) -> LimbAttributes:
     return LimbAttributes(
         segment_region=Region.LEGSEGMENT,
         membrane_region=Region.LEGMEMBRANE,
-        segment_id=lambda a: legsegment(leg_index, *a),
-        membrane_id=lambda a: legmembrane(leg_index, *a),
+        attribute_edge=lambda seg, d, c: legsegmentedge(leg_index, seg, d, c),
+        attribute_support=lambda seg, d, c: legsegmentsupport(leg_index, seg, d, c),
+        attribute_inset=lambda seg, d, c: legsegmentinset(leg_index, seg, d, c),
+        attribute_mid=lambda seg, m, c: legsegmentmid(leg_index, seg, m, c),
+        attribute_membrane=lambda jnt, l, c: legmembrane(leg_index, jnt, l, c),
     )

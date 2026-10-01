@@ -1,23 +1,21 @@
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from typing import Self, Callable
 
 
 @dataclass
-class LimbIdArgs:
-    segment_index: int
-    loop_index: int
-    corner_index: int
-
-    def __iter__(self):
-        return (getattr(self, f.name) for f in fields(self))
-
-
-@dataclass
 class LimbAttributes:
+    """Limb attributes and point ID generator functions.
+
+    All attribute functions take 3 arguments: (segment, loop_index, corner_index)
+    where corner_index: 1: left_bottom, 2: right_bottom, 3: right_upper, 4: left_upper.
+    """
     segment_region: str
     membrane_region: str
-    segment_id: Callable[[LimbIdArgs], str]
-    membrane_id: Callable[[LimbIdArgs], str]
+    attribute_edge: Callable[[int, int, int], str]
+    attribute_support: Callable[[int, int, int], str]
+    attribute_inset: Callable[[int, int, int], str]
+    attribute_mid: Callable[[int, int, int], str]
+    attribute_membrane: Callable[[int, int | str, int], str]
 
 
 @dataclass

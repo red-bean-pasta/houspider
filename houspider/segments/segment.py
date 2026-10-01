@@ -79,20 +79,21 @@ def add_segment_loop_cuts(
     geo: Geometry,
     segment_tubes: list[list[Point]],
     support_loop_ratio: float,
-) -> list[Point]:
+) -> list[list[Point]]:
     """Add support loop cuts near the start and end of each segment tube.
 
-    Returns all_seg_pts containing 16 points per segment:
-      - 4 points: start loop (loop index 2)
-      - 4 points: start support loop (loop index 3)
-      - 4 points: end support loop (loop index 4)
-      - 4 points: end loop (loop index 5)
+    Returns seg_tubes containing loops per segment:
+      - 4 points: start loop (edge 1)
+      - 4 points: start support loop (support 1)
+      - intermediate section loops (if any, ordered along segment)
+      - 4 points: end support loop (support -1)
+      - 4 points: end loop (edge -1)
     All loops preserve corner ordering [lb, rb, ru, lu].
     """
     coxa_width = segment_tubes[0][0].position().distanceTo(segment_tubes[0][1].position())
     cut_length = coxa_width * support_loop_ratio
 
-    all_seg_pts: list[Point] = []
+    all_seg_tubes: list[list[Point]] = []
 
     for cur_pts in segment_tubes:
         start_pts = cur_pts[:4]
@@ -103,7 +104,7 @@ def add_segment_loop_cuts(
         start_cut = loop_cut_tube(geo, start_pts, second_loop, cut_length)
         cut_source = start_cut if len(cur_pts) == 8 else penultimate_loop
         end_cut = loop_cut_tube(geo, end_pts, cut_source, cut_length)
-        all_seg_pts.extend([
+        all_seg_tubes.append([
             *start_pts,
             *start_cut,
             *cur_pts[4:-4],
@@ -111,17 +112,17 @@ def add_segment_loop_cuts(
             *end_pts,
         ])
 
-    return all_seg_pts
+    return all_seg_tubes
 
 
 def close_tarsus(
-    seg_pts: list[Point],
+    tarsus_pts: list[Point],
     tarsus_wedge_angle: float,
 ) -> None:
     """Cap the end of the tarsus segment with an outward-facing quad and apply wedging to bottom corners."""
-    assert len(seg_pts) >= 4, f"Expected at least 4 seg_pts, got {len(seg_pts)}"
+    assert len(tarsus_pts) >= 4, f"Expected at least 4 tarsus_pts, got {len(tarsus_pts)}"
     # Last loop of tarsus ordered [lb, rb, ru, lu]
-    p_lb, p_rb, p_ru, p_lu = seg_pts[-4:]
+    p_lb, p_rb, p_ru, p_lu = tarsus_pts[-4:]
 
     # [lb, rb, ru, lu] winding normal points along -Z (out of tarsus tip)
     fill_face([p_lb, p_rb, p_ru, p_lu])

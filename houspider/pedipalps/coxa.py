@@ -6,7 +6,7 @@ from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_float_parm, get_parms
 from houkit.topology import fill_face
 
-from .attributes import pedipalpcoxabuffer, pedipalpsegment
+from .attributes import pedipalpcoxabuffer, pedipalpsegmentedge, pedipalpsegmentsupport
 from ..bases.attributes import basemaxillamembrane
 from ..cheliceraes.attributes import cheliceraestartmembranesupport
 from ..helper import add_id_point, points_from_geo, positions_from_geo
@@ -41,7 +41,7 @@ def fill_bottom_right_face(node: hou.SopNode) -> None:
     geo: hou.Geometry = node.geometry()
     es4, c2, m1, cb = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 4, 2),
+        pedipalpsegmentsupport(1, 1, -1, 2),
         pedipalpcoxabuffer(1, "base", 2),
         basemaxillamembrane(1),
         pedipalpcoxabuffer(1, "bottom"),
@@ -54,8 +54,8 @@ def fill_back_face(node: hou.SopNode) -> None:
     s3, es3, es4, m1 = points_from_geo(
         geo,
         pedipalpcoxabuffer(1, "start", 3),
-        pedipalpsegment(1, 1, 4, 3),
-        pedipalpsegment(1, 1, 4, 2),
+        pedipalpsegmentsupport(1, 1, -1, 3),
+        pedipalpsegmentsupport(1, 1, -1, 2),
         basemaxillamembrane(1),
     )
     fill_face([es3, es4, m1, s3])
@@ -66,12 +66,12 @@ def fill_top_face(node: hou.SopNode) -> None:
 
     e2, m2, m3, m4, es2, es3 = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 5, 4),
+        pedipalpsegmentedge(1, 1, -1, 4),
         basemaxillamembrane(2),
         basemaxillamembrane(3),
         basemaxillamembrane(4),
-        pedipalpsegment(1, 1, 4, 4),
-        pedipalpsegment(1, 1, 4, 3),
+        pedipalpsegmentsupport(1, 1, -1, 4),
+        pedipalpsegmentsupport(1, 1, -1, 3),
     )
 
     direction = _get_coxa_base_direction(geo)
@@ -98,7 +98,7 @@ def add_front_upper_face(node: hou.SopNode) -> None:
     p = _add_front_face_point(geo, control_params.endite_buffer_ratios)
     es2, c6, m2 = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 4, 4),
+        pedipalpsegmentsupport(1, 1, -1, 4),
         pedipalpcoxabuffer(1, "fronttop"),
         basemaxillamembrane(2),
     )
@@ -111,9 +111,9 @@ def add_front_loop_faces(node: hou.SopNode) -> None:
     p = _add_loop_point(geo, control_params.endite_buffer_ratios.y())
     es1, es2, es4, cf, cb = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 4, 1),
-        pedipalpsegment(1, 1, 4, 4),
-        pedipalpsegment(1, 1, 4, 2),
+        pedipalpsegmentsupport(1, 1, -1, 1),
+        pedipalpsegmentsupport(1, 1, -1, 4),
+        pedipalpsegmentsupport(1, 1, -1, 2),
         pedipalpcoxabuffer(1, "front"),
         pedipalpcoxabuffer(1, "bottom"),
     )
@@ -159,8 +159,8 @@ def _add_bottom_right_face_point(
 ) -> hou.Point:
     e1, e2, m1 = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 5, 1),
-        pedipalpsegment(1, 1, 5, 2),
+        pedipalpsegmentedge(1, 1, -1, 1),
+        pedipalpsegmentedge(1, 1, -1, 2),
         basemaxillamembrane(1),
     )
 
@@ -182,9 +182,9 @@ def _add_base_trapezoid(
         basemaxillamembrane(1),
         basemaxillamembrane(2),
         pedipalpcoxabuffer(1, "bottom"),
-        pedipalpsegment(1, 1, 4, 2),
-        pedipalpsegment(1, 1, 5, 1),
-        pedipalpsegment(1, 1, 5, 2),
+        pedipalpsegmentsupport(1, 1, -1, 2),
+        pedipalpsegmentedge(1, 1, -1, 1),
+        pedipalpsegmentedge(1, 1, -1, 2),
     )
 
     pos_mid_bottom = (e1.position() + e4.position()) * 0.5
@@ -262,8 +262,8 @@ def _add_front_face_point(
 ) -> hou.Point:
     e1, e2 = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 5, 1),
-        pedipalpsegment(1, 1, 5, 4),
+        pedipalpsegmentedge(1, 1, -1, 1),
+        pedipalpsegmentedge(1, 1, -1, 4),
     )
     dist = _get_buffer_dist_z(geo, endite_buffer.y())
     direction = _get_coxa_base_direction(geo)
@@ -278,7 +278,7 @@ def _add_loop_point(
 ) -> hou.Point:
     e1, = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 5, 1),
+        pedipalpsegmentedge(1, 1, -1, 1),
     )
     dist = _get_buffer_dist_z(geo, endite_buffer_y)
     direction = _get_coxa_base_direction(geo)
@@ -293,9 +293,9 @@ def _get_maxilla_pole(node: hou.SopNode) -> hou.Vector3:
 
     e1, e2, e3, m1, m2, m4, ct2 = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 5, 1),
-        pedipalpsegment(1, 1, 5, 4),
-        pedipalpsegment(1, 1, 5, 3),
+        pedipalpsegmentedge(1, 1, -1, 1),
+        pedipalpsegmentedge(1, 1, -1, 4),
+        pedipalpsegmentedge(1, 1, -1, 3),
         basemaxillamembrane(1),
         basemaxillamembrane(2),
         basemaxillamembrane(4),
@@ -383,8 +383,8 @@ def _add_maxilla_quads_to_geo(
 def _get_coxa_base_direction(geo: hou.Geometry) -> hou.Vector3:
     es3, e3 = points_from_geo(
         geo,
-        pedipalpsegment(1, 1, 4, 3),
-        pedipalpsegment(1, 1, 5, 3),
+        pedipalpsegmentsupport(1, 1, -1, 3),
+        pedipalpsegmentedge(1, 1, -1, 3),
     )
     return (es3.position() - e3.position()).normalized()
 
@@ -392,7 +392,7 @@ def _get_coxa_base_direction(geo: hou.Geometry) -> hou.Vector3:
 def _get_buffer_dist_z(geo: hou.Geometry, endite_buffer_y: float) -> float:
     e1, m1 = positions_from_geo(
         geo,
-        pedipalpsegment(1, 1, 5, 1),
+        pedipalpsegmentedge(1, 1, -1, 1),
         basemaxillamembrane(1),
     )
     return e1.distanceTo(m1) * endite_buffer_y

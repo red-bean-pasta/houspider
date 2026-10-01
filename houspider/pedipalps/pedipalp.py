@@ -6,7 +6,15 @@ from houkit.models import Moject
 from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_parms
 
-from .attributes import Region, pedipalpcoxabuffer, pedipalpmembrane, pedipalpsegment
+from .attributes import (
+    Region,
+    pedipalpcoxabuffer,
+    pedipalpmembrane,
+    pedipalpsegmentedge,
+    pedipalpsegmentinset,
+    pedipalpsegmentmid,
+    pedipalpsegmentsupport,
+)
 from ..bases.attributes import basemaxillamembrane
 from ..helper import points_from_geo, prims_by_attr, set_point_id
 from ..legs.attributes import get_segment_sections
@@ -71,14 +79,14 @@ def position_basic(
 
 def _build_segments(
     node: hou.SopNode,
-) -> Moject[tuple[list[hou.Point], list[hou.Point], list[hou.Point]]]:
+) -> Moject[tuple[list[list[hou.Point]], list[hou.Point], list[hou.Point]]]:
     geo = node.geometry()
     param = _get_pedipalp_param(node)
     attributes = _get_pedipalp_attributes()
     result = build_segment_bases(geo, param, attributes)
-    (all_seg_pts, thickness_pts, all_mem_pts), _ = result
+    (seg_tubes, thickness_pts, all_mem_pts), _ = result
 
-    _attribute_pedipalp_coxa_buffers(1, all_seg_pts[:8])
+    _attribute_pedipalp_coxa_buffers(1, seg_tubes[0][:8])
 
     return result
 
@@ -87,8 +95,11 @@ def _get_pedipalp_attributes(side: int = 1) -> LimbAttributes:
     return LimbAttributes(
         segment_region=Region.PEDIPALPSEGMENT,
         membrane_region=Region.PEDIPALPMEMBRANE,
-        segment_id=lambda a: pedipalpsegment(side, *a),
-        membrane_id=lambda a: pedipalpmembrane(side, *a),
+        attribute_edge=lambda seg, d, c: pedipalpsegmentedge(side, seg, d, c),
+        attribute_support=lambda seg, d, c: pedipalpsegmentsupport(side, seg, d, c),
+        attribute_inset=lambda seg, d, c: pedipalpsegmentinset(side, seg, d, c),
+        attribute_mid=lambda seg, m, c: pedipalpsegmentmid(side, seg, m, c),
+        attribute_membrane=lambda jnt, l, c: pedipalpmembrane(side, jnt, l, c),
     )
 
 

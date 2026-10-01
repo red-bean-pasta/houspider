@@ -2,21 +2,17 @@ import hou
 
 
 def validate_segment_loops(
-    seg_pts: list[hou.Point],
+    seg_tubes: list[list[hou.Point]],
     points_per_loop: int = 4,
-    points_per_seg: int = 16,
 ) -> list[str]:
     """Validate that segment loops stay ordered within boundaries and do not invert."""
-    assert len(seg_pts) % points_per_seg == 0, (
-        f"Expected seg_pts length to be a multiple of {points_per_seg}, got {len(seg_pts)}"
-    )
-
-    num_segs = len(seg_pts) // points_per_seg
     warnings: list[str] = []
 
-    for seg_idx in range(num_segs):
-        cur_pts = seg_pts[seg_idx * points_per_seg : (seg_idx + 1) * points_per_seg]
-        warning = _validate_segment(cur_pts, seg_idx + 1, points_per_loop)
+    for seg_idx, cur_pts in enumerate(seg_tubes, start=1):
+        assert len(cur_pts) % points_per_loop == 0, (
+            f"Expected segment {seg_idx} points length to be a multiple of {points_per_loop}, got {len(cur_pts)}"
+        )
+        warning = _validate_segment(cur_pts, seg_idx, points_per_loop)
         if warning:
             warnings.append(warning)
 

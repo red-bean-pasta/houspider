@@ -4,8 +4,8 @@ from houkit.attributer import points_start_with
 from ..abdomens.attributes import abdomenend
 from ..bases.attributes import basecoxamemebrane, basemaxillamembrane
 from ..helper import points_from_geo, positions_from_geo
-from ..legs.attributes import legsegment
-from ..pedipalps.attributes import pedipalpsegment
+from ..legs.attributes import legsegmentedge, legsegmentinset
+from ..pedipalps.attributes import pedipalpsegmentedge, pedipalpsegmentinset
 from ..prosomas.attributes import ID as PEDICEL_IDS
 
 
@@ -27,21 +27,21 @@ def get_leg_bone_positions(
     s3, s4 = points_from_geo(geo, basecoxamemebrane(affix_idx, 3), basecoxamemebrane(affix_idx, 4))
     socket_hinge = (s3.position() + s4.position()) * 0.5
 
-    # 2. Joint hinges 1..6: midpoint of top corners (ru, lu) of former segment end inset (loop 6)
+    # 2. Joint hinges 1..6: midpoint of top corners (ru, lu) of former segment end inset
     joint_hinges = [
         _midpoint_from_ids(
             geo,
-            legsegment(affix_idx, k, 6, 3),
-            legsegment(affix_idx, k, 6, 4),
+            legsegmentinset(affix_idx, k, -1, 3),
+            legsegmentinset(affix_idx, k, -1, 4),
         )
         for k in range(1, 7)
     ]
 
-    # 3. Tip hinge: midpoint of top corners (ru, lu) of tarsus end (seg 7, loop 5)
+    # 3. Tip hinge: midpoint of top corners (ru, lu) of tarsus end (seg 7)
     tip_hinge = _midpoint_from_ids(
         geo,
-        legsegment(affix_idx, 7, 5, 3),
-        legsegment(affix_idx, 7, 5, 4),
+        legsegmentedge(affix_idx, 7, -1, 3),
+        legsegmentedge(affix_idx, 7, -1, 4),
     )
 
     return [socket_hinge, *joint_hinges, tip_hinge]
@@ -60,21 +60,21 @@ def get_pedipalp_bone_positions(
     sorted_by_y = sorted(socket_pts, key=lambda p: p.position().y())
     socket_hinge = (sorted_by_y[2].position() + sorted_by_y[3].position()) * 0.5
 
-    # 2. Joint hinges 1..5: midpoint of top corners (ru, lu) of former segment end inset (loop 6)
+    # 2. Joint hinges 1..5: midpoint of top corners (ru, lu) of former segment end inset
     joint_hinges = [
         _midpoint_from_ids(
             geo,
-            pedipalpsegment(side, k, 6, 3),
-            pedipalpsegment(side, k, 6, 4),
+            pedipalpsegmentinset(side, k, -1, 3),
+            pedipalpsegmentinset(side, k, -1, 4),
         )
         for k in range(1, 6)
     ]
 
-    # 3. Tip hinge: midpoint of top corners (ru, lu) of tarsus end (seg 6, loop 5)
+    # 3. Tip hinge: midpoint of top corners (ru, lu) of tarsus end (seg 6)
     tip_hinge = _midpoint_from_ids(
         geo,
-        pedipalpsegment(side, 6, 5, 3),
-        pedipalpsegment(side, 6, 5, 4),
+        pedipalpsegmentedge(side, 6, -1, 3),
+        pedipalpsegmentedge(side, 6, -1, 4),
     )
 
     return [socket_hinge, *joint_hinges, tip_hinge]
