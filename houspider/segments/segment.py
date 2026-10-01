@@ -1,10 +1,44 @@
-from hou import Geometry, Point
+import math
+
+from hou import Geometry, Point, Vector3
 from houkit.models import Moject
+from houkit.topologies.basic import fill_face, points_to_positions
 
 from .cube import get_cube_points
 from .helper import inset_loop, loop_cut_tube
 from .models import LimbParam
 from ..helper import bridge_loops
+
+
+def build_segment_tubes(
+    geo: Geometry,
+    param: LimbParam,
+) -> Moject[list[Point]]:
+    """Build the basic tubes for all segments of a leg.
+
+    Each segment consists of 8 points: 4 for the start loop and 4 for the end loop.
+    Every 4-point loop in the leg strictly follows corner ordering:
+      Index 0 (corner 1): Left Bottom  (-X, -Y)
+      Index 1 (corner 2): Right Bottom (+X, -Y)
+      Index 2 (corner 3): Right Upper  (+X, +Y)
+      Index 3 (corner 4): Left Upper   (-X, +Y)
+    """
+    segments, messages = get_cube_points(param)
+
+    seg_pts: list[Point] = []
+    for seg in segments:
+        cur_seg_pts = [geo.createPoint() for _ in range(8)]
+        for pt, pos in zip(cur_seg_pts, seg):
+            pt.setPosition(pos)
+        seg_pts.extend(cur_seg_pts)
+
+        # Loop points are ordered [lb, rb, ru, lu], winding clockwise looking into the tube,
+        # so bridge_loops automatically produces outward-facing surface normals.
+        start_loop = cur_seg_pts[:4]
+        end_loop = cur_seg_pts[4:]
+        bridge_loops(geo, start_loop, end_loop)
+
+    return Moject(seg_pts, messages)
 
 
 def inset_segment_thickness(
@@ -79,35 +113,25 @@ def add_segment_loop_cuts(
     return all_seg_pts
 
 
-def build_segment_tubes(
-    geo: Geometry,
-    param: LimbParam,
-) -> Moject[list[Point]]:
-    """Build the basic tubes for all segments of a leg.
+def close_tarsus(
+    seg_pts: list[Point],
+    tarsus_wedge_angle: float,
+) -> None:
+    """Cap the end of the tarsus segment with an outward-facing quad and apply wedging to bottom corners."""
+    assert len(seg_pts) >= 4, f"Expected at least 4 seg_pts, got {len(seg_pts)}"
+    # Last loop of tarsus ordered [lb, rb, ru, lu]
+    p_lb, p_rb, p_ru, p_lu = seg_pts[-4:]
 
-    Each segment consists of 8 points: 4 for the start loop and 4 for the end loop.
-    Every 4-point loop in the leg strictly follows corner ordering:
-      Index 0 (corner 1): Left Bottom  (-X, -Y)
-      Index 1 (corner 2): Right Bottom (+X, -Y)
-      Index 2 (corner 3): Right Upper  (+X, +Y)
-      Index 3 (corner 4): Left Upper   (-X, +Y)
-    """
-    segments, messages = get_cube_points(param)
+    # [lb, rb, ru, lu] winding normal points along -Z (out of tarsus tip)
+    fill_face([p_lb, p_rb, p_ru, p_lu])
 
-    seg_pts: list[Point] = []
-    for seg in segments:
-        cur_seg_pts = [geo.createPoint() for _ in range(8)]
-        for pt, pos in zip(cur_seg_pts, seg):
-            pt.setPosition(pos)
-        seg_pts.extend(cur_seg_pts)
+    pos_lb, pos_rb, pos_ru, pos_lu = points_to_positions([p_lb, p_rb, p_ru, p_lu])
+    offset_y = pos_lu.y() - pos_lb.y()
+    offset_z = offset_y * math.tan(math.radians(tarsus_wedge_angle))
 
-        # Loop points are ordered [lb, rb, ru, lu], winding clockwise looking into the tube,
-        # so bridge_loops automatically produces outward-facing surface normals.
-        start_loop = cur_seg_pts[:4]
-        end_loop = cur_seg_pts[4:]
-        bridge_loops(geo, start_loop, end_loop)
-
-    return Moject(seg_pts, messages)
+    # Apply wedge offset to bottom corners
+    p_lb.setPosition(Vector3(pos_lb.x(), pos_lb.y(), pos_lb.z() - offset_z))
+    p_rb.setPosition(Vector3(pos_rb.x(), pos_rb.y(), pos_rb.z() - offset_z))
 
 
 def _add_segment_thickness_loops(

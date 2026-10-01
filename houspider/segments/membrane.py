@@ -1,10 +1,8 @@
-import math
-
 import hou
-from houkit.topology import fill_face, points_to_positions
+from houkit.topology import points_to_positions
 
-from ..helper import bridge_loops
 from .helper import loop_cut_tube
+from ..helper import bridge_loops
 
 
 def fill_membranes(
@@ -74,28 +72,6 @@ def add_membrane_loop_cuts(
         ])
 
     return all_mem_pts
-
-
-def close_tarsus(
-    geo: hou.Geometry,
-    seg_pts: list[hou.Point],
-    tarsus_wedge_angle: float,
-) -> None:
-    """Cap the end of the tarsus segment with an outward-facing quad and apply wedging to bottom corners."""
-    assert len(seg_pts) >= 4, f"Expected at least 4 seg_pts, got {len(seg_pts)}"
-    # Last loop of tarsus ordered [lb, rb, ru, lu]
-    p_lb, p_rb, p_ru, p_lu = seg_pts[-4:]
-
-    # [lb, rb, ru, lu] winding normal points along -Z (out of tarsus tip)
-    fill_face([p_lb, p_rb, p_ru, p_lu])
-
-    pos_lb, pos_rb, pos_ru, pos_lu = points_to_positions([p_lb, p_rb, p_ru, p_lu])
-    offset_y = pos_lu.y() - pos_lb.y()
-    offset_z = offset_y * math.tan(math.radians(tarsus_wedge_angle))
-
-    # Apply wedge offset to bottom corners
-    p_lb.setPosition(hou.Vector3(pos_lb.x(), pos_lb.y(), pos_lb.z() - offset_z))
-    p_rb.setPosition(hou.Vector3(pos_rb.x(), pos_rb.y(), pos_rb.z() - offset_z))
 
 
 def _add_membrane_joint(

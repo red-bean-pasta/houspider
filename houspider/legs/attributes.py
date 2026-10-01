@@ -1,5 +1,8 @@
 from enum import StrEnum, auto
 
+import hou
+
+from ..attributes import LegSegment
 from ..helper import affix_id
 
 
@@ -46,3 +49,18 @@ def legmembrane(
                          3: right_upper (+X, +Y), 4: left_upper (-X, +Y).
     """
     return affix_id(ID.LEGMEMBRANE, leg_index, joint_index, loop_index, corner_index)
+
+
+def get_segment_sections(
+    node: hou.OpNode,
+) -> tuple[tuple[tuple[float, float, float], ...], ...]:
+    all_sections = []
+    for name in LegSegment:
+        sections_parm = node.parm(f"{name}_sections")
+        num_sections = sections_parm.eval()
+        sections = []
+        for i in range(num_sections):
+            parm_tuple = node.parmTuple(f"{name}_section{i + 1}")
+            sections.append(tuple(parm_tuple.eval()))
+        all_sections.append(tuple(sections))
+    return tuple(all_sections)

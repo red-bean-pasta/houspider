@@ -148,9 +148,7 @@ def _skin_limb_attributes(
     # 2. Skin segments (1..num_segments): 100% to each segment's bone
     for seg_idx in range(1, num_segments + 1):
         seg_bone = joint_indices[seg_idx - 1]
-        loops = [2, 3, 4, 5]
-        if seg_idx > 1:
-            loops.append(1)  # start inset
+        loops = [1, 2, 3, 4, 5]
         if seg_idx < num_segments:
             loops.append(6)  # end inset
 
@@ -188,7 +186,10 @@ def _skin_limb_attributes(
             id_p3 = membrane_id_fn(joint_idx, 3, corner_idx)
             id_p4 = segment_id_fn(joint_idx + 1, 1, corner_idx)
 
-            pts = [id_to_point[x] for x in (id_p0, id_p1, id_p2, id_p3, id_p4)]
+            p_list = [id_to_point.get(x) for x in (id_p0, id_p1, id_p2, id_p3, id_p4)]
+            if any(p is None for p in p_list):
+                continue
+            pts = p_list
             dists = [0.0]
             for a, b in zip(pts[:-1], pts[1:]):
                 dists.append(dists[-1] + a.position().distanceTo(b.position()))
