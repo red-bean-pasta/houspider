@@ -13,10 +13,10 @@ from ..helper import bridge_loops
 def build_segment_tubes(
     geo: Geometry,
     param: LimbParam,
-) -> Moject[list[Point]]:
+) -> Moject[list[list[Point]]]:
     """Build the basic tubes for all segments of a leg.
 
-    Each segment consists of 8 points: 4 for the start loop and 4 for the end loop.
+    Each segment consists of 4-point loops (at least 8 points: 4 for start and 4 for end).
     Every 4-point loop in the leg strictly follows corner ordering:
       Index 0 (corner 1): Left Bottom  (-X, -Y)
       Index 1 (corner 2): Right Bottom (+X, -Y)
@@ -25,25 +25,27 @@ def build_segment_tubes(
     """
     segments, messages = get_cube_points(param)
 
-    seg_pts: list[Point] = []
+    segment_tubes: list[list[Point]] = []
     for seg in segments:
-        cur_seg_pts = [geo.createPoint() for _ in range(8)]
+        cur_seg_pts = [geo.createPoint() for _ in range(len(seg))]
         for pt, pos in zip(cur_seg_pts, seg):
             pt.setPosition(pos)
-        seg_pts.extend(cur_seg_pts)
+        segment_tubes.append(cur_seg_pts)
 
         # Loop points are ordered [lb, rb, ru, lu], winding clockwise looking into the tube,
         # so bridge_loops automatically produces outward-facing surface normals.
-        start_loop = cur_seg_pts[:4]
-        end_loop = cur_seg_pts[4:]
-        bridge_loops(geo, start_loop, end_loop)
+        num_loops = len(cur_seg_pts) // 4
+        for l in range(num_loops - 1):
+            start_loop = cur_seg_pts[l * 4 : (l + 1) * 4]
+            end_loop = cur_seg_pts[(l + 1) * 4 : (l + 2) * 4]
+            bridge_loops(geo, start_loop, end_loop)
 
-    return Moject(seg_pts, messages)
+    return Moject(segment_tubes, messages)
 
 
 def inset_segment_thickness(
     geo: Geometry,
-    seg_pts: list[Point],
+    segment_tubes: list[list[Point]],
     support_loop_ratio: float,
 ) -> list[Point]:
     """Create inset thickness loops at segment ends and starts facing joint membranes.
@@ -53,16 +55,15 @@ def inset_segment_thickness(
       - 4 points for latter segment start inset (loop index 1)
     All loops preserve corner ordering [lb, rb, ru, lu].
     """
-    assert len(seg_pts) % 8 == 0, f"Expected seg_pts length to be a multiple of 8, got {len(seg_pts)}"
-    coxa_width = seg_pts[0].position().distanceTo(seg_pts[1].position())
+    coxa_width = segment_tubes[0][0].position().distanceTo(segment_tubes[0][1].position())
     cut_length = coxa_width * support_loop_ratio
 
-    num_segs = len(seg_pts) // 8
+    num_segs = len(segment_tubes)
     thickness_pts: list[Point] = []
 
     for i in range(num_segs - 1):
-        former_end = seg_pts[i * 8 + 4:(i + 1) * 8]
-        latter_start = seg_pts[(i + 1) * 8:(i + 1) * 8 + 4]
+        former_end = segment_tubes[i][-4:]
+        latter_start = segment_tubes[i + 1][:4]
         former_inset, latter_inset = _add_segment_thickness_loops(
             geo,
             former_end,
@@ -76,7 +77,7 @@ def inset_segment_thickness(
 
 def add_segment_loop_cuts(
     geo: Geometry,
-    seg_pts: list[Point],
+    segment_tubes: list[list[Point]],
     support_loop_ratio: float,
 ) -> list[Point]:
     """Add support loop cuts near the start and end of each segment tube.
@@ -88,24 +89,24 @@ def add_segment_loop_cuts(
       - 4 points: end loop (loop index 5)
     All loops preserve corner ordering [lb, rb, ru, lu].
     """
-    assert len(seg_pts) % 8 == 0, f"Expected seg_pts length to be a multiple of 8, got {len(seg_pts)}"
-    coxa_width = seg_pts[0].position().distanceTo(seg_pts[1].position())
+    coxa_width = segment_tubes[0][0].position().distanceTo(segment_tubes[0][1].position())
     cut_length = coxa_width * support_loop_ratio
 
-    num_segs = len(seg_pts) // 8
     all_seg_pts: list[Point] = []
 
-    for i in range(num_segs):
-        cur_pts = seg_pts[i * 8:(i + 1) * 8]
+    for cur_pts in segment_tubes:
         start_pts = cur_pts[:4]
-        end_pts = cur_pts[4:]
+        end_pts = cur_pts[-4:]
 
-        start_cut = loop_cut_tube(geo, start_pts, end_pts, cut_length)
-        end_cut = loop_cut_tube(geo, end_pts, start_cut, cut_length)
-
+        second_loop = cur_pts[4:8]
+        penultimate_loop = cur_pts[-8:-4]
+        start_cut = loop_cut_tube(geo, start_pts, second_loop, cut_length)
+        cut_source = start_cut if len(cur_pts) == 8 else penultimate_loop
+        end_cut = loop_cut_tube(geo, end_pts, cut_source, cut_length)
         all_seg_pts.extend([
             *start_pts,
             *start_cut,
+            *cur_pts[4:-4],
             *end_cut,
             *end_pts,
         ])

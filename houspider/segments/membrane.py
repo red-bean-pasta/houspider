@@ -30,7 +30,7 @@ def fill_membranes(
 
 def add_membrane_loop_cuts(
     geo: hou.Geometry,
-    cube_pts: list[hou.Point],
+    cube_pts: list[hou.Point] | list[list[hou.Point]],
     thickness_pts: list[hou.Point],
     mem_pts: list[hou.Point],
     support_loop_ratio: float,
@@ -44,7 +44,8 @@ def add_membrane_loop_cuts(
     All loops preserve corner ordering [lb, rb, ru, lu].
     """
     assert len(thickness_pts) % 8 == 0, f"Expected thickness_pts length to be a multiple of 8, got {len(thickness_pts)}"
-    coxa_width = cube_pts[0].position().distanceTo(cube_pts[1].position())
+    first_loop = cube_pts[0] if isinstance(cube_pts[0], list) else cube_pts
+    coxa_width = first_loop[0].position().distanceTo(first_loop[1].position())
     cut_length = coxa_width * support_loop_ratio
 
     num_joints = len(thickness_pts) // 8

@@ -49,3 +49,46 @@ def loop_cut_tube(
     cut_pts = points_from_loop_cut(cut_edges)
     assert len(cut_pts) == 4, f"Expected four points from tube loop cut, got {len(cut_pts)}"
     return cut_pts
+
+
+def compute_intermediate_ratios(
+    segment: list[Point] | list[Vector3],
+) -> list[float]:
+    if len(segment) < 9:
+        return []
+
+    start_pts = segment[:4]
+    end_pts = segment[-4:]
+    intermediate_pts = segment[4:-4]
+    ratios: list[float] = []
+    for offset, pt in enumerate(intermediate_pts):
+        corner = offset % 4
+        p_start = start_pts[corner].position() if isinstance(start_pts[corner], Point) else start_pts[corner]
+        p_end = end_pts[corner].position() if isinstance(end_pts[corner], Point) else end_pts[corner]
+        p = pt.position() if isinstance(pt, Point) else pt
+        v_edge = p_end - p_start
+        len_sq = v_edge.lengthSquared()
+        t = (p - p_start).dot(v_edge) / len_sq if len_sq > 1e-10 else 0.0
+        ratios.append(t)
+    return ratios
+
+
+def update_intermediate_positions(
+    segment: list[Point] | list[Vector3],
+    ratios: list[float],
+) -> None:
+    if len(ratios) < 1:
+        return
+
+    start_pts = segment[:4]
+    end_pts = segment[-4:]
+    for offset, t in enumerate(ratios):
+        corner = offset % 4
+        p_start = start_pts[corner].position() if isinstance(start_pts[corner], Point) else start_pts[corner]
+        p_end = end_pts[corner].position() if isinstance(end_pts[corner], Point) else end_pts[corner]
+        new_pos = p_start * (1.0 - t) + p_end * t
+        idx = 4 + offset
+        if isinstance(segment[idx], Point):
+            segment[idx].setPosition(new_pos)
+        else:
+            segment[idx] = new_pos

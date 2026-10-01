@@ -3,6 +3,7 @@ import math
 from hou import Vector3, Vector2
 from houkit.models import Moject
 
+from .helper import compute_intermediate_ratios, update_intermediate_positions
 from .models import LimbParam
 
 
@@ -107,11 +108,13 @@ def _wedge_joint(
         section_index: int,
         direction: float,
     ) -> None:
+        ratios = compute_intermediate_ratios(segment)
         _, height = _get_section_width_height(segment, section_index)
         delta = height * math.tan(math.radians(wedge_angle)) * direction
         start = section_index * 4 if section_index >= 0 else len(segment) + section_index * 4
         segment[start] += Vector3(0.0, 0.0, delta)
         segment[start + 1] += Vector3(0.0, 0.0, delta)
+        update_intermediate_positions(segment, ratios)
 
     _wedge_bottom(former_segment, -1, 1.0)
     _wedge_bottom(latter_segment, 0, -1.0)

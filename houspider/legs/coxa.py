@@ -6,6 +6,7 @@ from houkit.parameterizer import get_parms
 from houkit.topology import fill_face, fill_pentagon_with_buffer, points_to_positions
 
 from ..helper import set_point_id
+from ..segments.helper import compute_intermediate_ratios, update_intermediate_positions
 from .attributes import legsegment
 
 
@@ -15,25 +16,14 @@ def adjust_coxa(
     socket_midpoints: list[hou.Point],
     coxa_points: list[hou.Point],
 ) -> tuple[list[hou.Point], list[hou.Point]]:
-    assert len(coxa_points) >= 8 and len(coxa_points) % 4 == 0, (
-        f"Expected coxa_points length to be a multiple of 4 (>= 8), got {len(coxa_points)}"
-    )
+    assert len(coxa_points) >= 8 and len(coxa_points) % 4 == 0, f"Expected coxa_points length to be a multiple of 4 (>= 8), got {len(coxa_points)}"
     assert len(socket_points) == 4, f"Expected 4 socket points, got {len(socket_points)}"
     assert len(socket_midpoints) == 2, f"Expected 2 socket midpoints, got {len(socket_midpoints)}"
 
     coxa_start_pts = coxa_points[:4]
     coxa_end_pts = coxa_points[-4:]
-    intermediate_pts = coxa_points[4:-4]
 
-    # Pre-compute parametric ratio t along nominal edges before skewing
-    intermediate_ratios: list[float] = []
-    for offset, pt in enumerate(intermediate_pts):
-        corner = offset % 4
-        p_start_nom = coxa_start_pts[corner].position()
-        p_end = coxa_end_pts[corner].position()
-        v_edge = p_end - p_start_nom
-        t = (pt.position() - p_start_nom).dot(v_edge) / v_edge.lengthSquared()
-        intermediate_ratios.append(t)
+    intermediate_ratios = compute_intermediate_ratios(coxa_points)
 
     control_params = get_parms(get_control(get_parent(node), "CONTROL"), use_tuple=False)
     adjusted_start_positions = _get_adjusted_coxa_start_positions(
@@ -44,12 +34,7 @@ def adjust_coxa(
     for point, position in zip(coxa_start_pts, adjusted_start_positions):
         point.setPosition(position)
 
-    _update_coxa_intermediate_positions(
-        coxa_start_pts,
-        intermediate_pts,
-        coxa_end_pts,
-        intermediate_ratios,
-    )
+    update_intermediate_positions(coxa_points, intermediate_ratios)
 
     support_loop_ratio = control_params.joint_support_loop_ratio
     buffer_ratio = _get_coxa_buffer_ratio(
@@ -117,19 +102,6 @@ def _adjust_side_positions(
         pos_su.z() + (pos_bu.z() - pos_su.z()) * ratio,
     )
     return pos_ab, pos_au
-
-
-def _update_coxa_intermediate_positions(
-    start_pts: list[hou.Point],
-    intermediate_pts: list[hou.Point],
-    end_pts: list[hou.Point],
-    intermediate_ratios: list[float],
-) -> None:
-    for offset, (pt, t) in enumerate(zip(intermediate_pts, intermediate_ratios)):
-        corner = offset % 4
-        p_start = start_pts[corner].position()
-        p_end = end_pts[corner].position()
-        pt.setPosition(p_start * (1.0 - t) + p_end * t)
 
 
 def _get_coxa_buffer_ratio(
