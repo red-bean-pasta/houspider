@@ -1,8 +1,7 @@
 from collections.abc import Callable, Sequence
 from typing import Any
 
-import hou
-
+from hou import SopNode, Point, Geometry, Polygon, Prim, Vector3, Attrib
 from houkit.attributer import (
     add_point_attrib,
     deduplicate_point_attribs,
@@ -15,7 +14,8 @@ from houkit.attributer import (
 )
 from houkit import attributer
 from houkit.formatter import affix_text
-from houkit.noder import sopify
+from houkit.noder import sopify, get_control
+from houkit.parameterizings.querier import Parameters, get_parms
 from houkit.topology import add_point, fill_face, fill_face_by_attrib, inset, offset_point
 
 
@@ -23,43 +23,62 @@ def affix_id(prefix: str, *affixes: int | str | float) -> str:
     return affix_text(prefix, *affixes)
 
 
-def add_id_attr(geo: hou.Geometry, default: str = "") -> hou.Attrib:
+def add_id_attr(geo: Geometry, default: str = "") -> Attrib:
     return add_point_attrib(geo, "id", default)
 
 
-def add_id_point(geo: hou.Geometry, position: hou.Vector3, value: str) -> hou.Point:
+def add_id_point(geo: Geometry, position: Vector3, value: str) -> Point:
     return add_point(geo, position, ("id", value))
 
 
+def get_control_parms(
+    node: SopNode,
+    exclude_internal: bool = True,
+    use_tuple: bool = True,
+    control_name: str = "CONTROLS"
+) -> Parameters:
+    return get_parms(
+        get_control(node, control_name),
+        exclude_internal,
+        use_tuple,
+    )
+
+
 def replace_points(
-    geo: hou.Geometry,
-    point_data: Sequence[tuple[str, hou.Vector3]],
-) -> list[hou.Point]:
+    geo: Geometry,
+    point_data: Sequence[tuple[str, Vector3]],
+) -> list[Point]:
     geo.clear()
     add_id_attr(geo)
     return [add_id_point(geo, position, point_id) for point_id, position in point_data]
 
 
 def fill_face_with_attr(
-    geo: hou.Geometry,
-    points: Sequence[hou.Point],
+    points: Sequence[Point],
     attribute: str,
     value: Any,
     reverse: bool = False,
-) -> hou.Polygon:
+) -> Polygon:
     polygon = fill_face(points, reverse)
     polygon.setAttribValue(attribute, value)
     return polygon
 
+def fill_face_with_region(
+    points: Sequence[Point],
+    value: Any,
+    reverse: bool = False,
+) -> Polygon:
+    return fill_face_with_attr(points, "region", value, reverse)
+
 
 def bridge_loops(
-    geo: hou.Geometry,
-    first_loop: Sequence[hou.Point],
-    second_loop: Sequence[hou.Point],
+    geo: Geometry,
+    first_loop: Sequence[Point],
+    second_loop: Sequence[Point],
     reverse: bool = False,
     cross_order: bool = False,
     primitive_attr: tuple[str, Any] | None = None,
-) -> list[hou.Polygon]:
+) -> list[Polygon]:
     assert len(first_loop) == len(second_loop) >= 2, "Expected equally sized loops with at least two points"
     polygons = []
     for index in range(len(first_loop)):
@@ -78,11 +97,11 @@ def bridge_loops(
 
 
 def prims_by_attr(
-    geo: hou.Geometry | Sequence[hou.Prim],
+    geo: Geometry | Sequence[Prim],
     attribute: str,
     value: str | tuple[str, ...],
     startswith: bool = False,
-) -> list[hou.Prim]:
+) -> list[Prim]:
     prims = geo.prims() if hasattr(geo, "prims") else geo
     if startswith:
         return [prim for prim in prims if prim.stringAttribValue(attribute).startswith(value)]
@@ -90,7 +109,7 @@ def prims_by_attr(
 
 
 def set_prim_attr_where_blank(
-    geo: hou.Geometry,
+    geo: Geometry,
     attribute: str,
     value: Any,
 ) -> None:
@@ -100,10 +119,10 @@ def set_prim_attr_where_blank(
 
 
 def sopify_chain(
-    parent: hou.SopNode,
-    input_node: hou.SopNode | None,
-    stages: Sequence[Callable[[], None] | Callable[[hou.SopNode], None]],
-) -> hou.SopNode:
+    parent: SopNode,
+    input_node: SopNode | None,
+    stages: Sequence[Callable[[], None] | Callable[[SopNode], None]],
+) -> SopNode:
     current = input_node
     for stage in stages:
         current = sopify(parent, current, stage)
@@ -113,8 +132,8 @@ def sopify_chain(
 
 def move_points(
     ratio: float,
-    direction: hou.Vector3,
-    *points: hou.Point,
+    direction: Vector3,
+    *points: Point,
 ) -> None:
     offset = direction * ratio
     for point in points:
@@ -122,8 +141,8 @@ def move_points(
 
 
 def points_from_loop_cut(
-    cut_edges: dict[tuple[hou.Point, hou.Point], tuple[hou.Prim, hou.Prim]],
-) -> list[hou.Point]:
+    cut_edges: dict[tuple[Point, Point], tuple[Prim, Prim]],
+) -> list[Point]:
     edges = list(cut_edges)
     if not edges:
         return []
@@ -138,12 +157,12 @@ def points_from_loop_cut(
 
 
 def inset_inner_prims(
-    geo: hou.Geometry,
-    prims: list[hou.Prim],
+    geo: Geometry,
+    prims: list[Prim],
     scalar: float,
     use_ratio: bool = True,
     follow_existing_edge: bool = True,
-) -> list[hou.Prim]:
+) -> list[Prim]:
     if not prims or scalar == 0:
         return list(prims)
 
@@ -151,7 +170,7 @@ def inset_inner_prims(
     components = inset(prims, scalar, use_ratio, follow_existing_edge)
     created_prims = list(geo.prims())[prim_count_before - len(prims):]
 
-    inner_prims: list[hou.Prim] = []
+    inner_prims: list[Prim] = []
     created_index = 0
     for inner_component, border_prims in components.items():
         inner_count = len(inner_component)
@@ -163,53 +182,53 @@ def inset_inner_prims(
 
 
 def points_by_id(
-    geo: hou.Geometry | hou.Prim | Sequence[hou.Prim],
-) -> dict[str, hou.Point]:
+    geo: Geometry | Prim | Sequence[Prim],
+) -> dict[str, Point]:
     return unique_points_by_attrib(geo, "id")
 
 
-def points_from_geo(geo: hou.Geometry, *ids: str) -> tuple[hou.Point, ...]:
+def points_from_geo(geo: Geometry, *ids: str) -> tuple[Point, ...]:
     return tuple(attributer.points_from_geo(geo, "id", *ids))
 
-def positions_from_geo(geo: hou.Geometry, *ids: str) -> tuple[hou.Vector3, ...]:
+def positions_from_geo(geo: Geometry, *ids: str) -> tuple[Vector3, ...]:
     return tuple(attributer.positions_from_geo(geo, "id", *ids))
 
-def positions_from_points(*points: hou.Point) -> tuple[hou.Vector3, ...]:
+def positions_from_points(*points: Point) -> tuple[Vector3, ...]:
     return tuple(p.position() for p in points)
 
 
-def set_point_id(point: hou.Point, value: str) -> None:
+def set_point_id(point: Point, value: str) -> None:
     set_point_attrib(point, "id", value)
 
 
-def set_points_id(points: Sequence[hou.Point], values: Sequence[str]) -> None:
+def set_points_id(points: Sequence[Point], values: Sequence[str]) -> None:
     set_points_attrib(points, "id", values)
 
 
-def get_id_range(geo: hou.Geometry, prefix: str) -> tuple[int, int] | None:
+def get_id_range(geo: Geometry, prefix: str) -> tuple[int, int] | None:
     return scan_indexed_attrib_range(geo, "id", prefix)
 
 
-def fill_face_by_id(geo: hou.Geometry, values: Sequence[str], reverse: bool = False) -> hou.Polygon:
+def fill_face_by_id(geo: Geometry, values: Sequence[str], reverse: bool = False) -> Polygon:
     return fill_face_by_attrib(geo, "id", values, reverse)
 
 
 def fill_face_by_id_with_attr(
-    geo: hou.Geometry,
+    geo: Geometry,
     values: Sequence[str],
     attribute: str,
     value: Any,
     reverse: bool = False,
-) -> hou.Polygon:
+) -> Polygon:
     polygon = fill_face_by_id(geo, values, reverse)
     polygon.setAttribValue(attribute, value)
     return polygon
 
 
 def unique_points_start_with_id(
-    geo: hou.Geometry,
+    geo: Geometry,
     prefixes: str | tuple[str, ...],
-) -> dict[str, hou.Point]:
+) -> dict[str, Point]:
     if isinstance(prefixes, str):
         prefixes = (prefixes,)
     return {
@@ -220,7 +239,7 @@ def unique_points_start_with_id(
 
 
 def deduplicate_id_attr(
-    geo: hou.Geometry,
+    geo: Geometry,
     prefix: str | tuple[str, ...] | None = None,
     add_affix: bool = False,
     keep_first: bool = True,
@@ -228,14 +247,13 @@ def deduplicate_id_attr(
     deduplicate_point_attribs(geo, "id", prefix, add_affix=add_affix, keep_first=keep_first)
 
 
-def rename_left_ids(geo: hou.Geometry, affix_index: int | None = 0) -> None:
+def rename_left_ids(geo: Geometry, affix_index: int | None = 0) -> None:
     """Rename point IDs for mirrored geometry on the left side (x < 0).
 
-    Negates the numeric affix at the given `affix_index` (default 0).
-    - If `affix_index` is an integer: negates the affix at that index, supporting negative indexing like `list[-1]` to negate the last affix.
-    - If `affix_index` is None: negates all affixes.
-
-    If an ID has only a single affix (e.g. "cheliceraestart1"), that affix is negated even if `affix_index` is out of range.
+    Negates the numeric affix at the given `affix_index`.
+    `affix_index` can be negative to index from the last.
+    Use None to negate all affixes.
+    `affix_index` defaults to 0.
     """
     modify_point_attribs(
         geo,
@@ -244,10 +262,8 @@ def rename_left_ids(geo: hou.Geometry, affix_index: int | None = 0) -> None:
         lambda point_id: _rename_point_id(point_id, affix_index),
     )
 
-
-def _is_left_point(point: hou.Point) -> bool:
+def _is_left_point(point: Point) -> bool:
     return point.position()[0] < 0.0
-
 
 def _rename_point_id(point_id: str, affix_index: int | None) -> str | None:
     parts = point_id.split("_")
@@ -275,12 +291,11 @@ def _rename_point_id(point_id: str, affix_index: int | None) -> str | None:
 
     return prefix + "_".join(affixes)
 
-
 def _negate_id_affix(value: str) -> str:
     if not value:
         return value
     return value[1:] if value.startswith("-") else f"-{value}"
 
 
-def rename_left_ids_node(node: hou.SopNode) -> None:
+def rename_left_ids_node(node: SopNode) -> None:
     rename_left_ids(node.geometry())

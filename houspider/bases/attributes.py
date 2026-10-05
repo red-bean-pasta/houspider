@@ -1,6 +1,6 @@
 from enum import StrEnum, auto
 
-from ..helper import affix_id
+from houspider.helper import affix_id
 
 
 class ID(StrEnum):

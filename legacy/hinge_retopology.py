@@ -3,9 +3,9 @@ from hou import Point, Geometry, SopNode
 
 from houkit.topology import split_point, line_intersect_line, is_neighbor, find_prim, fill_face
 
-from ..helper import points_from_geo, set_point_id
-from .attributes import basecoxamemebrane, basesternum, basemouthmembrane, basemaxillamembrane
-from ..sternums.attributes import sternummiddle, sternumrim, sternumriminner
+from helper import points_from_geo, set_point_id
+from bases.attributes import basecoxamemebrane, basesternum, basemouthmembrane, basemaxillamembrane
+from sternums.attributes import sternumrimmiddle, sternumrim, sternumriminner
 
 
 def retopo_corners(node: SopNode) -> None:
@@ -30,8 +30,8 @@ def _retopo_sternum_corner(
         sternumriminner(index),
         basecoxamemebrane(previous_index, 2),
         basecoxamemebrane(index, 1),
-        sternummiddle(previous_index),
-        sternummiddle(index),
+        sternumrimmiddle(previous_index),
+        sternumrimmiddle(index),
         basesternum(index),
     )
 
@@ -61,7 +61,7 @@ def _retopo_front_sternum_corner(
         basecoxamemebrane(index, 1),
         sternumriminner(index),
         sternumrim(0),
-        sternummiddle(index),
+        sternumrimmiddle(index),
         basesternum(index, 1),
         basesternum(index, 2),
     )
