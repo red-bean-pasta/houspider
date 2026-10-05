@@ -39,43 +39,44 @@
 
 ## 5. Verification & Testing
 
-- **HIP Generation & Cooking Check**:
-  At the conclusion of geometry edits, regenerate the test HIP and verify that all nodes cook without errors:
+- **Avoid Inline `hython -c`**:
+  It's encouraged to use or generalize reusable utility scripts at `scripts/`. This helps user add commands as auto-approvable tools. 
+  If the command is unlikely to be reused again, you can use in-line methods and ask for approval.
+
+- **HIP Generation**:
+  At the conclusion of geometry edits, regenerate the test HIP:
   ```shell
   hython scripts/build_test_hip.py
   ```
+
 - **Node Cooking Validation**:
-  Inspect the generated `test/test.hip` by cooking all nodes in `/obj`:
+  Inspect and cook all nodes in `/obj` (or under a specific root) using `scripts/cook_and_check.py`:
   ```shell
-  hython -c '
-  import hou
-  import sys
-
-  hou.hipFile.load("test/test.hip")
-
-  root = hou.node("/obj")
-  if root is None:
-      print("Node not found")
-      sys.exit(1)
-
-  for node in root.allSubChildren():
-      print("Cooking:", node.path())
-      try:
-          node.cook(force=True)
-      except hou.Error as exc:
-          print("\nFAILED:", node.path())
-          errors = node.errors()
-          if errors:
-              for err in errors:
-                  print("  ERROR:", err)
-          else:
-              print("  ERROR:", exc)
-          sys.exit(1)
-
-  print("All nodes cooked successfully.")
-  '
+  hython scripts/cook_and_check.py test/test.hip
+  # Or cook under a specific root:
+  hython scripts/cook_and_check.py test/test.hip --root /obj/spider/generator/prosoma
   ```
   *(Note: Cooking verification can be skipped if the task is deliberately left midway per user instruction.)*
+
+- **Geometry & Attribute Inspection**:
+  To inspect point/prim attributes, counts, or coordinates on a node without writing inline python:
+  ```shell
+  hython scripts/inspect_geo.py /obj/spider/generator/prosoma/base --attrib id --value "basesternum(5, 1)"
+  hython scripts/inspect_geo.py /obj/spider/generator/prosoma/base --type prim --attrib region
+  ```
+
+- **Isolated Stage Testing**:
+  To test an isolated geometry processing function directly against an input node:
+  ```shell
+  hython scripts/run_stage.py houspider.bases.geos.coxa:correct_coxa_shape /obj/spider/generator/prosoma/sternum
+  ```
+
+- **Symbol & Source Introspection**:
+  To inspect docstrings, members, or source code across HOM (`hou`) and project modules:
+  ```shell
+  hython scripts/inspect_symbol.py hou.Geometry --filter point
+  hython scripts/inspect_symbol.py houkit.noder.sopify --source
+  ```
 
 ---
 
