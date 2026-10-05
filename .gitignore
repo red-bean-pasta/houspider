@@ -18,7 +18,8 @@ backup/
 *.hip
 
 test/
-.aiassistant/temp/
+.aiassistant/tmp/
+.aiassistant/historybook/
 .aiassistant/archived/
 
 utilities
