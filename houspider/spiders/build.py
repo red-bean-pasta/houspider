@@ -20,12 +20,9 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
     prosoma = build_prosoma(spider)
 
     abdomen_node = build_abdomen(spider, prosoma)
-
     merged_p_a = add_merge(spider, "merge_prosoma_and_abdomen", prosoma, abdomen_node)
-
     pedicel = build_pedicel(spider, merged_p_a)
     fused_pa_p = add_merge_fuse(spider, "merge_fuse_main_and_pedicel", merged_p_a, pedicel)
-
     legs = build_legs(spider, fused_pa_p)
     pedipalps = build_pedipalps(spider, fused_pa_p, legs)
     fused = add_merge_fuse(
@@ -35,7 +32,6 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
         legs,
         pedipalps,
     )
-
     recalculated = add_recalculate_normal(spider, "recalculate_normals", fused)
     _add_subdivide(spider, "debug_subdivision", recalculated, depth=3)
     output = add_output(spider, "OUTPUT_SPIDER", recalculated)

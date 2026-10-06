@@ -12,7 +12,6 @@ def build() -> hou.OpNode:
     spider_node = _add_geo(root, "spider")
 
     geometry = builds.build_spider(spider_node, name="geometry")
-
     skel = builds.build_skeleton(
         spider_node,
         name="skeleton",

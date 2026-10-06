@@ -25,18 +25,12 @@ def build(spider: hou.OpNode) -> hou.SopNode:
     sternum = build_sternum(prosoma)
     base = build_base(prosoma, sternum)
 
-    s_c_fuse = add_merge_fuse(prosoma, "merge_fuse_sternum_and_coxa", base, sternum)
-
-    dorsal = build_dorsal(prosoma, s_c_fuse)
-
-    b_d_fuse = add_merge_fuse(prosoma, "merge_fuse_base_and_dorsal", s_c_fuse, dorsal)
-
+    dorsal = build_dorsal(prosoma, base)
+    b_d_fuse = add_merge_fuse(prosoma, "merge_fuse_base_and_dorsal", base, dorsal)
     mouth = build_mouth(prosoma, b_d_fuse)
     chelicerae = build_chelicerae(prosoma, mouth)
-
     positioned = _position_prosoma(prosoma, chelicerae)
     opened = sopify(prosoma, positioned, pedicel.open_prosoma_pedicel)
-
     _ = add_output(prosoma, "OUT_PROSOMA", opened)
 
     prosoma.layoutChildren()
