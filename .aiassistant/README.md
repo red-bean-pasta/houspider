@@ -10,3 +10,4 @@ This directory stores persistent agent knowledge, findings, and interaction hist
 ## Active Notebook Topics
 - [`bases-refactor.md`](notebook/bases-refactor.md): Technical findings on the bases outset refactoring, parameter contracts, and topology attribution rules.
 - [`sternum-shape.md`](notebook/sternum-shape.md): Shape definition, profile curvature, and 3-loop quad topology of the sternum plastron.
+- [`base-shape.md`](notebook/base-shape.md): Shape definition, coxa flap orientation, socket windows, and buffer margins of the prosoma base.
