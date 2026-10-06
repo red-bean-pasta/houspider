@@ -12,7 +12,7 @@ def direction_and_distance(
     ps = source.position()
     return (
         (pt - ps).normalized(),
-        pt.distance_to(pt),
+        ps.distanceTo(pt),
     )
 
 

@@ -70,9 +70,9 @@ def add_midpoints(node: hou.SopNode) -> None:
 
 def add_center_spine(node: hou.SopNode) -> None:
     geo = node.geometry()
-    right_points = [point for point in geo.points() if point.position()[0] >= 0.0]
-    assert len(right_points) == 10
-    positions = [point.position() for point in right_points[2:-1]]
+    right_points = [point for point in geo.points() if point.position().x() > 0.0 + 1e-5]
+    positions = [point.position() for point in right_points[1:]] # Exclude sternumrim1
+    positions = sorted(positions, key=lambda p: p.z())
 
     for index, position in enumerate(positions, start=1):
         add_id_point(geo, hou.Vector3(0.0, 0.0, position[2]), sternumspine(index))
