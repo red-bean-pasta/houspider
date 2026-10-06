@@ -41,4 +41,9 @@
   - **Length Inflation**: `dist = base_dist / cos_phi` inflates the extruded edge length by `1 / 0.7171 ≈ 1.395` (almost 40% longer than `basesternummiddle2` / `basesternummiddle3`).
   - **Direction Skew**: The interior edge direction points towards positive X and negative Z, so the outward extrusion `(-e_dir)` points towards negative X (inward toward spider midline) and positive Z (posteriorly), causing a severe directional skew compared to the rim normal.
 
+## Midline Symmetry & Tolerance Invariants
+- **Outset Numerical Float Drift**: Boundary outset bisectors accumulate float inaccuracy (e.g. `X ≈ -0.0008` instead of `0.0`). Midline vertices (`basesternum(0)`) are snapped to `X = 0.0` right upon creation in `extrude_sternum_rim` (`_align_midline_points`) and outer midline points (`basesternum(0)`, `baseend(0)`) are snapped in `extrude_base_buffer` (`_snap_midline_points`).
+- **Downstream Right-Half Filtering**: With midline points correctly snapped to `X = 0.0` at the generation stages, `houspider.dorsals.base.extract_work_base` cleanly uses standard `x >= -1e-4` filtering without special-case `or` conditions.
+- **`fill_face_with_attr` Contract**: `houspider.helper.fill_face_with_attr(points, attribute, value, reverse=False)` does not take `geo`. All consumers across `cheliceraes` (`sections.py`, `geometry.py`), `pedicel.py`, and `helper.py:bridge_loops` pass `points` directly.
+
 
