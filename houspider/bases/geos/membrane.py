@@ -4,7 +4,7 @@ from hou import SopNode, Geometry, Vector3, Prim, Point
 from houkit.topologies.basic import offset_point
 from houkit.topologies.face_offseter import outset
 
-from houkit_candidate import points_list_by_attrib, direction_and_distance
+from houspider.houkit_candidate import points_list_by_attrib, direction_and_distance
 
 from houspider.helper import get_control_parms, set_point_id, points_from_geo
 from houspider.bases.attributes import (
@@ -16,6 +16,7 @@ from houspider.bases.attributes import (
     basemouthmembrane,
     basesternum,
     basesternummiddle,
+    outer_loop_ids,
 )
 from houspider.helper import (
     deduplicate_id_attr,
@@ -29,7 +30,7 @@ from houspider.sternums import attributes as sternum_attributes
 
 def inset_coxa(node: SopNode) -> None:
     geo = node.geometry()
-    side_ratio, _, _ = get_control_parms(node).membrane_ratio
+    side_ratio, _, _ = get_control_parms(node).socket_membrane_ratio
     points = points_by_id(geo)
     for index in (*range(1, 5), *range(-4, 0)):
         sm = points[sternum_attributes.sternumrimmiddle(index)]
@@ -39,7 +40,7 @@ def inset_coxa(node: SopNode) -> None:
         source_prims = bsm.prims()
         inner_prims = inset_inner_prims(geo, source_prims, dist, use_ratio=False, follow_existing_edge=True)
 
-        _attrib_coxa_membrane_points(inner_prims)
+        _attrib_coxa_membrane_points(inner_prims, index)
 
         for prim in inner_prims:
             prim.setAttribValue("region", Region.COXASOCKET)
@@ -50,7 +51,7 @@ def inset_coxa(node: SopNode) -> None:
 
 def inset_labium(node: SopNode) -> None:
     geo = node.geometry()
-    side_ratio, _, _ = get_control_parms(node).membrane_ratio
+    side_ratio, _, _ = get_control_parms(node).socket_membrane_ratio
     _inset_membrane_region(
         geo,
         side_ratio,
@@ -64,7 +65,7 @@ def inset_labium(node: SopNode) -> None:
 
 def inset_maxilla(node: SopNode) -> None:
     geo = node.geometry()
-    side_ratio, _, _ = get_control_parms(node).membrane_ratio
+    side_ratio, _, _ = get_control_parms(node).socket_membrane_ratio
     _inset_membrane_region(
         geo,
         side_ratio,
@@ -81,14 +82,15 @@ def adjust_coxa_membrane_points(node: SopNode) -> None:
     geo = node.geometry()
     points = points_by_id(geo)
 
-    ratios = get_control_parms(node).membrane_ratio
+    ratios = get_control_parms(node).socket_membrane_ratio
     for side in (1, -1):
         for pair in range(1, 5):
-            for l, h in ((1, 4), (2, 3)):
-                lower, higher = (
-                    points[basecoxamemebrane(side * pair, l)],
-                    points[basecoxamemebrane(side * pair, h)]
-                )
+            index = side * pair
+            for lower, higher in (
+                (points[basecoxamemebrane(index, 1)], points[basecoxamemebrane(index, 4)]),
+                (points[basecoxamemebrane(index, 2)], points[basecoxamemebrane(index, 3)]),
+                (points[basecoxamembranemiddle(index, 1)], points[basecoxamembranemiddle(index, 2)]),
+            ):
                 _offset_vertical_membrane_points(lower, higher, ratios)
 
 
@@ -127,48 +129,36 @@ def extrude_base_buffer(node: SopNode) -> None:
     ratio = get_control_parms(node).dorsal_membrane_ratio
     _, baseline = direction_and_distance(sm1, bsm2)
     dist = ratio * baseline
-    outset(list(geo.prims()), dist, use_ratio=False)
-    deduplicate_id_attr(geo)
+    outer_prims_map = outset(list(geo.prims()), dist, use_ratio=False)
+    for prims in outer_prims_map.values():
+        for prim in prims:
+            prim.setAttribValue("region", Region.BASEBUFFERMEMBRANE)
+    deduplicate_id_attr(geo, outer_loop_ids(), keep_first=False)
 
 
 
 def _attrib_coxa_membrane_points(
     prims: Sequence[Prim],
+    index: int,
 ) -> None:
-    points = points_list_by_attrib(prims, "id")
-    for side in (1, -1):
-        for number in range(1, 5):
-            i = side * number
-            _attrib_second(
-                points,
-                sternum_attributes.sternumrim(i),
-                basecoxamemebrane(i, 1),
-            )
-            _attrib_second(
-                points,
-                sternum_attributes.sternumrim(i + 1),
-                basecoxamemebrane(i, 2),
-            )
-            _attrib_second(
-                points,
-                basesternum(i + 1) if i < 4 else basesternum(i, 1 if side > 0 else 2),
-                basecoxamemebrane(i, 3),
-            )
-            _attrib_second(
-                points,
-                basesternum(i) if i > 1 else basesternum(i, 2),
-                basecoxamemebrane(i, 4),
-            )
-            _attrib_second(
-                points,
-                sternum_attributes.sternumrimmiddle(i),
-                basecoxamembranemiddle(i, 1),
-            )
-            _attrib_second(
-                points,
-                basesternummiddle(i),
-                basecoxamembranemiddle(i, 2),
-            )
+    points = {
+        p.stringAttribValue("id"): p
+        for prim in prims
+        for p in prim.points()
+        if p.stringAttribValue("id")
+    }
+    sign = 1 if index > 0 else -1
+    next_idx = 5 if abs(index) == 4 else index + sign
+
+    ant_basesternum = basesternum(index, 2) if abs(index) == 1 else basesternum(index)
+    post_basesternum = basesternum(5, 1 if index > 0 else 2) if abs(index) == 4 else basesternum(next_idx)
+
+    set_point_id(points[sternum_attributes.sternumrim(index)], basecoxamemebrane(index, 1))
+    set_point_id(points[sternum_attributes.sternumrim(next_idx)], basecoxamemebrane(index, 2))
+    set_point_id(points[post_basesternum], basecoxamemebrane(index, 3))
+    set_point_id(points[ant_basesternum], basecoxamemebrane(index, 4))
+    set_point_id(points[sternum_attributes.sternumrimmiddle(index)], basecoxamembranemiddle(index, 1))
+    set_point_id(points[basesternummiddle(index)], basecoxamembranemiddle(index, 2))
 
 
 def _classify_labium_membrane_points(geo: Geometry) -> None:
@@ -242,13 +232,13 @@ def _inset_membrane_region(
 def _offset_vertical_membrane_points(
     lower: Point,
     higher: Point,
-    ratios: tuple[Vector3, Vector3, Vector3],
+    ratios: tuple[float, float, float],
 ) -> None:
     side_ratio, upper_ratio, lower_ratio = ratios
     direction, distance = direction_and_distance(lower, higher)
     unit = distance / (1 - 2 * side_ratio)
-    upper_offset = unit * (upper_ratio - side_ratio)
-    lower_offset = unit * (lower_ratio - side_ratio)
+    upper_offset = -direction * (unit * (upper_ratio - side_ratio))
+    lower_offset = direction * (unit * (lower_ratio - side_ratio))
     offset_point(lower, lower_offset)
     offset_point(higher, upper_offset)
 
