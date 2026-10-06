@@ -44,7 +44,7 @@ def add_end_section(node: hou.SopNode) -> None:
     ]
 
     add_prim_attrib(geo, "region", "")
-    fill_face_with_attr(geo, c3_pts, "region", Region.FANG, True)
+    fill_face_with_attr(c3_pts, "region", Region.FANG, True)
 
 
 @dataclass

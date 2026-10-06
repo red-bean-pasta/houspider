@@ -91,7 +91,7 @@ def bridge_loops(
         if primitive_attr is None:
             polygon = fill_face(points, reverse)
         else:
-            polygon = fill_face_with_attr(geo, points, primitive_attr[0], primitive_attr[1], reverse)
+            polygon = fill_face_with_attr(points, primitive_attr[0], primitive_attr[1], reverse)
         polygons.append(polygon)
     return polygons
 

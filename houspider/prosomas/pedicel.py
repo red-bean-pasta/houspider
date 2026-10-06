@@ -321,16 +321,16 @@ def _fill_upper_pedicel_dorsal_back_faces(
 ) -> None:
     # Reconnect upper-right and upper-left faces
     fill_face_with_attr(
-        geo, [basesupportend0, baseend0, pp_outer_right, p_right], "region", dorsal_attributes.Region.DORSALBACK, reverse=True
+        [basesupportend0, baseend0, pp_outer_right, p_right], "region", dorsal_attributes.Region.DORSALBACK, reverse=True
     )
     fill_face_with_attr(
-        geo, [p_right, pp_outer_right, bs5_1, basesupportsternum5_1], "region", dorsal_attributes.Region.DORSALBACK, reverse=True
+        [p_right, pp_outer_right, bs5_1, basesupportsternum5_1], "region", dorsal_attributes.Region.DORSALBACK, reverse=True
     )
     fill_face_with_attr(
-        geo, [basesupportend0, baseend0, pp_outer_left, p_left], "region", dorsal_attributes.Region.DORSALBACK, reverse=False
+        [basesupportend0, baseend0, pp_outer_left, p_left], "region", dorsal_attributes.Region.DORSALBACK, reverse=False
     )
     fill_face_with_attr(
-        geo, [p_left, pp_outer_left, bs5_2, basesupportsternum5_2], "region", dorsal_attributes.Region.DORSALBACK, reverse=False
+        [p_left, pp_outer_left, bs5_2, basesupportsternum5_2], "region", dorsal_attributes.Region.DORSALBACK, reverse=False
     )
 
 
@@ -344,10 +344,10 @@ def _fill_upper_pedicel_buffer_faces(
     baseend0: hou.Point,
 ) -> None:
     fill_face_with_attr(
-        geo, [pp_upper, pp_right, pp_outer_right, baseend0], "region", base_attributes.Region.BASEBUFFERMEMBRANE, reverse=True
+        [pp_upper, pp_right, pp_outer_right, baseend0], "region", base_attributes.Region.BASEBUFFERMEMBRANE, reverse=True
     )
     fill_face_with_attr(
-        geo, [pp_upper, pp_left, pp_outer_left, baseend0], "region", base_attributes.Region.BASEBUFFERMEMBRANE, reverse=False
+        [pp_upper, pp_left, pp_outer_left, baseend0], "region", base_attributes.Region.BASEBUFFERMEMBRANE, reverse=False
     )
 
 

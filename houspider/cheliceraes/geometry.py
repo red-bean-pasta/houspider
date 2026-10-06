@@ -40,7 +40,6 @@ def build_geometry(node: hou.SopNode) -> None:
     add_prim_attrib(geo, "region", "")
 
     fill_face_with_attr(
-        geo,
         [
             *base_points,
             *reversed(upper_points),
