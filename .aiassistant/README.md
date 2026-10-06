@@ -8,4 +8,5 @@ This directory stores persistent agent knowledge, findings, and interaction hist
 - **`tmp/`**: Disposable intermediate outputs, command dumps, and scratch buffers.
 
 ## Active Notebook Topics
-<!-- Optional: Add entries with brief descriptions only when the filename alone is not self-descriptive -->
+- [`bases-refactor.md`](notebook/bases-refactor.md): Technical findings on the bases outset refactoring, parameter contracts, and topology attribution rules.
+- [`sternum-shape.md`](notebook/sternum-shape.md): Shape definition, profile curvature, and 3-loop quad topology of the sternum plastron.
