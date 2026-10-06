@@ -26,6 +26,7 @@ def extrude_sternum_rim(node: SopNode) -> None:
 
     _attrib_new_points(new_points)
     _attrib_new_prims(prims)
+    _align_midline_points(geo)
     _split_for_maxilla(geo)
     _split_for_pedicel(geo)
 
@@ -123,6 +124,13 @@ def _attrib_new_prims(prims: Iterable[Prim]) -> None:
             p.setAttribValue("region", Region.LABIUM)
         else:
             p.setAttribValue("region", Region.COXA)
+
+
+def _align_midline_points(geo: Geometry) -> None:
+    for p in geo.points():
+        if p.stringAttribValue("id") == basesternum(0):
+            pos = p.position()
+            p.setPosition(Vector3(0.0, pos.y(), pos.z()))
 
 
 def _split_for_maxilla(geo: Geometry) -> None:

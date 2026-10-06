@@ -11,6 +11,7 @@ from houspider.bases.attributes import (
     Region,
     basecoxamemebrane,
     basecoxamembranemiddle,
+    baseend,
     basemaxilla,
     basemaxillamembrane,
     basemouthmembrane,
@@ -134,6 +135,15 @@ def extrude_base_buffer(node: SopNode) -> None:
         for prim in prims:
             prim.setAttribValue("region", Region.BASEBUFFERMEMBRANE)
     deduplicate_id_attr(geo, outer_loop_ids(), keep_first=False)
+    _snap_midline_points(geo)
+
+
+def _snap_midline_points(geo: Geometry) -> None:
+    for pid in (basesternum(0), baseend(0)):
+        for p in geo.points():
+            if p.stringAttribValue("id") == pid:
+                pos = p.position()
+                p.setPosition(Vector3(0.0, pos.y(), pos.z()))
 
 
 
