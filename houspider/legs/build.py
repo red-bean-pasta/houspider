@@ -167,7 +167,7 @@ def _add_segment_parameters(legs: hou.OpNode) -> None:
             f"{name}_section#",
             "Section #",
             3,
-            default_value=(0.0, 1.0, 1.0),
+            default_value=(0.5, 1.0, 1.0),
             help=(
                 "(position, width, height)\n"
                 "- position: Length ratio along segment from 0.0 (start) to 1.0 (end).\n"
