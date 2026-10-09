@@ -12,7 +12,7 @@ def get_cube_points(
 ) -> Moject[list[list[Vector3]]]:
     assert len(param.yaw_flex_specs) == len(param.length_ratios)
 
-    coxa = _build_segment(param.socket_size, param.segment_sections[0], param.coxa_length)
+    coxa = _build_segment(param.socket_size, param.segment_sections[0], param.coxa_length, param.spine_ratio)
 
     messages: list[str] = []
     segments: list[list[Vector3]] = [coxa]
@@ -21,7 +21,7 @@ def get_cube_points(
         seg_length = param.coxa_length * param.length_ratios[i]
         former = segments[-1]
         former_end_w, former_end_h = _get_section_width_height(former, -1)
-        latter = _build_segment((former_end_w, former_end_h), cur_sections, seg_length)
+        latter = _build_segment((former_end_w, former_end_h), cur_sections, seg_length, param.spine_ratio)
         latter_start_w, latter_start_h = _get_section_width_height(latter, 0)
 
         (offset, wedge_angle), seg_messages = _calc_segment_offset_and_wedge(
@@ -45,21 +45,24 @@ def _build_segment(
     reference_section: tuple[float, float],
     sections: tuple[tuple[float, float, float], ...],
     length: float,
+    spine_ratio: float,
 ) -> list[Vector3]:
     ref_w, ref_h = reference_section
+    start_h = ref_h * sections[0][2]
     points: list[Vector3] = []
     for len_ratio, w_ratio, h_ratio in sections:
         w = ref_w * w_ratio
         h = ref_h * h_ratio
         hw = w / 2.0
         hh = h / 2.0
+        center_y = _calc_spine_center_offset(start_h, h, spine_ratio)
         z = -length * len_ratio
         # Loop corners ordered: 0: left bottom, 1: right bottom, 2: right upper, 3: left upper
         points.extend([
-            Vector3(-hw, -hh, z),
-            Vector3(hw, -hh, z),
-            Vector3(hw, hh, z),
-            Vector3(-hw, hh, z),
+            Vector3(-hw, center_y - hh, z),
+            Vector3(hw, center_y - hh, z),
+            Vector3(hw, center_y + hh, z),
+            Vector3(-hw, center_y + hh, z),
         ])
     return points
 
@@ -141,7 +144,7 @@ def _calc_segment_offset_and_wedge(
 
     # Keep the spine position (the point at spine_ratio from the top) aligned
     # across the joint, moving the latter segment in either vertical direction.
-    offset_y = (latter_height - former_height) * spine_ratio
+    offset_y = _calc_spine_top_offset(former_height, latter_height, spine_ratio)
 
     wedged_x = abs(offset_y) * math.tan(math.radians(wedge_angle))
     offset_x -= wedged_x
@@ -335,3 +338,20 @@ def _solve_membrane_thickness_rad(
     """
     # d / tan(needed_angle) = l = min_height / cos(wedge_angle)
     return min_height / math.cos(wedge_angle) * math.tan(needed_angle)
+
+
+def _calc_spine_top_offset(
+    ref_height: float,
+    target_height: float,
+    spine_ratio: float,
+) -> float:
+    return (target_height - ref_height) * spine_ratio
+
+
+def _calc_spine_center_offset(
+    ref_height: float,
+    target_height: float,
+    spine_ratio: float,
+) -> float:
+    return (ref_height - target_height) / 2.0 + _calc_spine_top_offset(ref_height, target_height, spine_ratio)
+
