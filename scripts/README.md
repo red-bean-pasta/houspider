@@ -60,6 +60,10 @@ hython scripts/diff_geo.py /obj/spider/geometry/prosoma/base/correct_rim_edges
 hython scripts/diff_geo.py /obj/spider/geometry/prosoma/base/correct_rim_edges \
   --ref /obj/spider/geometry/prosoma/base/rotate_middle_edges
 
+# Diff node across two different HIP files
+hython scripts/diff_geo.py /obj/spider/geometry \
+  --hip test/test.hip --ref-hip test/configured.hipnc
+
 # Filter by minimum displacement distance
 hython scripts/diff_geo.py /obj/spider/geometry/prosoma/base/rotate_coxa_flaps --min-dist 0.1
 ```
@@ -101,6 +105,15 @@ hython scripts/inspect_parms.py /obj/spider/geometry/legs/CONTROL -p "*wedge*"
 
 # Only show parameters modified from their defaults
 hython scripts/inspect_parms.py /obj/spider/geometry/legs/CONTROL -m
+
+# Inspect hierarchy by folders and multiparms
+hython scripts/inspect_parms.py /obj/spider test/test.hip -t -m
+
+# Diff parameters between two HIP files
+hython scripts/inspect_parms.py /obj/spider test/test.hip --ref-hip test/configured.hipnc
+
+# Export matched parameters formatted as Python assignments
+hython scripts/inspect_parms.py /obj/spider test/test.hip -p "*coxa_length*" -f python
 ```
 
 ---

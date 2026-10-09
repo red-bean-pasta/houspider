@@ -13,37 +13,61 @@ def diff_geo(
     hip_file: str,
     node_path: str,
     ref_path: str | None = None,
+    ref_hip: str | None = None,
     id_attrib: str = "id",
     min_dist: float = 1e-5,
     limit: int = 50,
 ) -> None:
-    hou.hipFile.load(hip_file)
-    node = hou.node(node_path)
-    if node is None:
-        print(f"Error: Target node not found at '{node_path}'")
-        sys.exit(1)
-
-    if ref_path:
-        ref_node = hou.node(ref_path)
+    if ref_hip:
+        hou.hipFile.load(ref_hip)
+        actual_ref_path = ref_path if ref_path else node_path
+        ref_node = hou.node(actual_ref_path)
         if ref_node is None:
-            print(f"Error: Reference node not found at '{ref_path}'")
+            print(f"Error: Reference node not found at '{actual_ref_path}' in '{ref_hip}'")
             sys.exit(1)
+        ref_node.cook(force=True)
+        ref_geo = hou.Geometry()
+        ref_geo.copy(ref_node.geometry())
+        ref_desc = f"{actual_ref_path} [{ref_hip}]"
+
+        hou.hipFile.load(hip_file)
+        node = hou.node(node_path)
+        if node is None:
+            print(f"Error: Target node not found at '{node_path}' in '{hip_file}'")
+            sys.exit(1)
+        node.cook(force=True)
+        geo = node.geometry()
+        node_desc = f"{node.path()} [{hip_file}]"
     else:
-        inputs = node.inputs()
-        if not inputs or inputs[0] is None:
-            print(f"Error: Node '{node_path}' has no input node. Specify reference with --ref.")
+        hou.hipFile.load(hip_file)
+        node = hou.node(node_path)
+        if node is None:
+            print(f"Error: Target node not found at '{node_path}'")
             sys.exit(1)
-        ref_node = inputs[0]
 
-    node.cook(force=True)
-    ref_node.cook(force=True)
+        if ref_path:
+            ref_node = hou.node(ref_path)
+            if ref_node is None:
+                print(f"Error: Reference node not found at '{ref_path}'")
+                sys.exit(1)
+        else:
+            inputs = node.inputs()
+            if not inputs or inputs[0] is None:
+                print(f"Error: Node '{node_path}' has no input node. Specify reference with --ref.")
+                sys.exit(1)
+            ref_node = inputs[0]
 
-    geo = node.geometry()
-    ref_geo = ref_node.geometry()
+        node.cook(force=True)
+        ref_node.cook(force=True)
+
+        geo = node.geometry()
+        ref_geo = ref_node.geometry()
+        ref_desc = ref_node.path()
+        node_desc = node.path()
 
     print(f"Comparing:")
-    print(f"  Reference (A): {ref_node.path()} ({len(ref_geo.points())} pts, {len(ref_geo.prims())} prims)")
-    print(f"  Target    (B): {node.path()} ({len(geo.points())} pts, {len(geo.prims())} prims)")
+    print(f"  Reference (A): {ref_desc} ({len(ref_geo.points())} pts, {len(ref_geo.prims())} prims)")
+    print(f"  Target    (B): {node_desc} ({len(geo.points())} pts, {len(geo.prims())} prims)")
     print("=" * 80)
 
     # Attribute difference
@@ -107,10 +131,11 @@ def diff_geo(
     else:
         # Fall back to point number matching
         min_pts = min(len(ref_geo.points()), len(geo.points()))
-        moved = []
+        ref_points = ref_geo.points()
+        cur_points = geo.points()
         for i in range(min_pts):
-            p_ref = ref_geo.iterPoints()[i]
-            p_cur = geo.iterPoints()[i]
+            p_ref = ref_points[i]
+            p_cur = cur_points[i]
             disp = p_cur.position() - p_ref.position()
             dist = disp.length()
             if dist >= min_dist:
@@ -142,14 +167,15 @@ def diff_geo(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Diff geometry between two SOP nodes.")
     parser.add_argument("node_path", help="Target SOP node path")
-    parser.add_argument("--ref", help="Reference SOP node path (defaults to target node's first input)")
+    parser.add_argument("--ref", help="Reference SOP node path (defaults to target node's first input, or node_path if --ref-hip is set)")
     parser.add_argument("--hip", default="test/test.hip", help="HIP file path (default: test/test.hip)")
+    parser.add_argument("--ref-hip", help="Reference HIP file path for cross-HIP comparison")
     parser.add_argument("--attrib", default="id", help="Point ID attribute name (default: 'id')")
     parser.add_argument("--min-dist", type=float, default=1e-5, help="Minimum distance threshold (default: 1e-5)")
     parser.add_argument("--limit", type=int, default=50, help="Max points to list (default: 50)")
     args = parser.parse_args()
 
-    diff_geo(args.hip, args.node_path, args.ref, args.attrib, args.min_dist, args.limit)
+    diff_geo(args.hip, args.node_path, args.ref, args.ref_hip, args.attrib, args.min_dist, args.limit)
 
 
 if __name__ == "__main__":
