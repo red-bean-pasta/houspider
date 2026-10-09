@@ -54,7 +54,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
         legs,
         "coxa_length_ratio",
         1,
-        1.2,
+        1.3,
         (0.0, None),
         label="Coxa Length",
         help="Front coxa length evaluated against front socket width.",
@@ -63,7 +63,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
         legs,
         "segment_length_ratios",
         6,
-        (0.33, 1.5, 0.9, 1.2, 1, 0.7),
+        (0.33, 2.0, 0.9, 1.2, 1.0, 0.7),
         (0.0, None),
         hou.parmNamingScheme.Base1,
         label="Segment Lengths",
@@ -148,21 +148,21 @@ def _add_segment_parameters(legs: hou.OpNode) -> None:
     )
     segment_specs = (
         (LegSegment.COXA, ((0.0, 0.9, 0.75), (1.0, 0.85, 0.7))),
-        (LegSegment.TROCHANTER, ((0.0, 0.9, 0.9), (1.0, 0.95, 1.1))),
-        (LegSegment.FEMUR, ((0.0, 0.95, 0.95), (1.0, 1.0, 1.0))),
-        (LegSegment.PATELLA, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
-        (LegSegment.TIBIA, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
-        (LegSegment.METATARSUS, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
-        (LegSegment.TARSUS, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
+        (LegSegment.TROCHANTER, ((0.0, 0.8, 0.8), (1.0, 0.95, 0.95))),
+        (LegSegment.FEMUR, ((0.0, 0.9, 0.95), (1.0, 0.8, 0.2), (0.875, 0.85, 0.9))),
+        (LegSegment.PATELLA, ((0.0, 0.95, 0.6), (1.0, 0.925, 4.0), (0.35, 0.975, 4.0))),
+        (LegSegment.TIBIA, ((0.0, 0.85, 0.95), (1.0, 0.8, 0.75), (0.45, 0.85, 0.65))),
+        (LegSegment.METATARSUS, ((0.0, 0.85, 0.67), (1.0, 0.6, 0.5), (0.925, 0.75, 0.575))),
+        (LegSegment.TARSUS, ((0.0, 0.95, 0.95), (1.0, 0.95, 0.85), (0.325, 1.325, 1.75))),
     )
-    for name, _ in segment_specs:
+    for name, defaults in segment_specs:
         label = title_case(name)
         mp = hou.FolderParmTemplate(
             f"{name}_sections",
             label,
             folder_type=hou.folderType.MultiparmBlock,
         )
-        mp.setDefaultValue(2)
+        mp.setDefaultValue(len(defaults))
         vec_template = hou.FloatParmTemplate(
             f"{name}_section#",
             "Section #",
