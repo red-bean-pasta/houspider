@@ -1,5 +1,5 @@
 from hou import Geometry, Point, Vector3
-from houkit.topology import loop_cut, offset_point, points_to_positions
+from houkit.topology import loop_cut, points_to_positions
 
 from ..helper import points_from_loop_cut
 
@@ -58,10 +58,11 @@ def loop_cut_tube(
 
 def compute_intermediate_ratios(
     segment: list[Point] | list[Vector3],
-) -> list[float]:
+) -> list[tuple[float, Vector3]]:
+    """Capture ratio t along corner edge and section-size offset from baseline for each intermediate point."""
     start_pts = segment[:4]
     end_pts = segment[-4:]
-    ratios: list[float] = []
+    specs: list[tuple[float, Vector3]] = []
     for offset, pt in enumerate(segment[4:-4]):
         corner = offset % 4
         p_start = _position(start_pts[corner])
@@ -70,27 +71,33 @@ def compute_intermediate_ratios(
         v_edge = p_end - p_start
         len_sq = v_edge.lengthSquared()
         t = (p - p_start).dot(v_edge) / len_sq if len_sq > 1e-10 else 0.0
-        ratios.append(t)
-    return ratios
+        baseline = p_start * (1.0 - t) + p_end * t
+        offset_vec = p - baseline
+        specs.append((t, offset_vec))
+    return specs
 
 
 def update_intermediate_positions(
     segment: list[Point] | list[Vector3],
-    ratios: list[float],
+    ratios: list[float] | list[tuple[float, Vector3]],
 ) -> None:
-    """Follow the captured ratios along local Z, preserving section width and height."""
-    local_z = (_position(segment[0]) - _position(segment[-4])).normalized()
+    """Update intermediate points along their respective corner edges, preserving section-size offsets."""
     start_pts = segment[:4]
     end_pts = segment[-4:]
-    for offset, t in enumerate(ratios):
-        corner = offset % 4
-        target = _position(start_pts[corner]) * (1.0 - t) + _position(end_pts[corner]) * t
-        idx = 4 + offset
-        displacement = local_z * (target - _position(segment[idx])).dot(local_z)
-        if isinstance(segment[idx], Point):
-            offset_point(segment[idx], displacement)
+    for offset, item in enumerate(ratios):
+        if isinstance(item, (tuple, list)):
+            t, offset_vec = item
         else:
-            segment[idx] += displacement
+            t, offset_vec = item, Vector3(0.0, 0.0, 0.0)
+        corner = offset % 4
+        p_start = _position(start_pts[corner])
+        p_end = _position(end_pts[corner])
+        target = p_start * (1.0 - t) + p_end * t + offset_vec
+        idx = 4 + offset
+        if isinstance(segment[idx], Point):
+            segment[idx].setPosition(target)
+        else:
+            segment[idx] = target
 
 
 def _position(point: Point | Vector3) -> Vector3:

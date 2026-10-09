@@ -142,7 +142,7 @@ def _get_pedipalp_param(
     max_segment_yaws = _select_pedipalp_segments(tuple(leg_params.max_yaw_angles))[1:]
     min_segment_flexes = _select_pedipalp_segments(tuple(leg_params.min_flex_angles))[1:]
 
-    return LimbParam.from_specs(
+    param = LimbParam.from_specs(
         socket_size=socket_size,
         coxa_length=pedipalp_coxa_length,
         segment_sections=segment_sections,
@@ -154,6 +154,13 @@ def _get_pedipalp_param(
         support_loop_ratio=control_params.joint_support_loop_ratio,
         tarsus_wedge_angle=leg_params.tarsus_wedge_angle,
     )
+    _lock_pedipalp_coxa_sections(param)
+    return param
+
+
+def _lock_pedipalp_coxa_sections(param: LimbParam) -> None:
+    coxa_sections = (param.segment_sections[0][0], param.segment_sections[0][-1])
+    param.segment_sections = (coxa_sections, *param.segment_sections[1:])
 
 
 _T = TypeVar("_T")

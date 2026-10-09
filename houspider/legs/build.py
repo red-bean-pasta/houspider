@@ -11,7 +11,7 @@ from houkit.noder import (
 from houkit.parameterizer import add_float_parm
 
 from ..attributes import LegSegment
-from houspider.helper import rename_left_ids_node
+from houspider.helper import rename_left_ids_node, sopify_chain
 from . import topology
 
 
@@ -24,12 +24,23 @@ def build(
     _add_parameters(legs)
     _add_controls(legs)
 
-    recorded = sopify(legs, legs.indirectInputs()[0], topology.record_global_info)
-    extracted = sopify(legs, recorded, topology.extract_right_leg_points)
-    extruded = sopify(legs, extracted, topology.extrude_legs)
-
-    cleaned = sopify(legs, extruded, topology.cleanup)
-    fused = add_fuse(legs, "fuse_sockets", cleaned)
+    cleaned_up = sopify_chain(
+        legs,
+        legs.indirectInputs()[0],
+        (
+            topology.record_global_info,
+            topology.extract_right_leg_points,
+            topology.build_basic,
+            topology.position_basic,
+            topology.adjust_coxa_start,
+            topology.fill_coxa_upper_pentagon,
+            topology.fill_coxa_bottom_pentagon,
+            topology.fill_coxa_back_faces,
+            topology.fill_coxa_front_faces,
+            topology.cleanup,
+        ),
+    )
+    fused = add_fuse(legs, "fuse_sockets", cleaned_up)
     mirrored = add_mirror(legs, "mirror_left_legs", fused, (1, 0, 0), True, False)
     renamed = sopify(legs, mirrored, rename_left_ids_node)
     add_output(legs, "OUT_LEGS", renamed)
@@ -136,9 +147,9 @@ def _add_segment_parameters(legs: hou.OpNode) -> None:
         folder_type=hou.folderType.Collapsible,
     )
     segment_specs = (
-        (LegSegment.COXA, ((0.0, 1.0, 1.0), (1.0, 0.75, 1.2))),
-        (LegSegment.TROCHANTER, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
-        (LegSegment.FEMUR, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
+        (LegSegment.COXA, ((0.0, 0.9, 0.75), (1.0, 0.85, 0.7))),
+        (LegSegment.TROCHANTER, ((0.0, 0.9, 0.9), (1.0, 0.95, 1.1))),
+        (LegSegment.FEMUR, ((0.0, 0.95, 0.95), (1.0, 1.0, 1.0))),
         (LegSegment.PATELLA, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
         (LegSegment.TIBIA, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
         (LegSegment.METATARSUS, ((0.0, 1.0, 1.0), (1.0, 1.0, 1.0))),
@@ -157,6 +168,12 @@ def _add_segment_parameters(legs: hou.OpNode) -> None:
             "Section #",
             3,
             default_value=(0.0, 1.0, 1.0),
+            help=(
+                "(position, width, height)\n"
+                "- position: Length ratio along segment from 0.0 (start) to 1.0 (end).\n"
+                "- width: Width multiplier against preceding segment's end section (or socket).\n"
+                "- height: Height multiplier against preceding segment's end section (or socket)."
+            ),
         )
         mp.setParmTemplates([vec_template])
         folder.addParmTemplate(mp)

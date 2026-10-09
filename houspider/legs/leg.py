@@ -1,7 +1,7 @@
 from typing import Any
 
 import hou
-from houkit.attributer import add_prim_attrib
+from houkit.attributer import add_prim_attrib, points_start_with
 from houkit.geomath import rotation_to
 from houkit.noder import get_control, get_parent
 from houkit.parameterizer import get_parms
@@ -12,6 +12,7 @@ from ..helper import points_from_geo
 from ..segments.build import build_segment_bases
 from ..segments.models import LimbAttributes, LimbParam
 from .attributes import (
+    ID,
     Region,
     get_segment_sections,
     legmembrane,
@@ -20,11 +21,10 @@ from .attributes import (
     legsegmentmid,
     legsegmentsupport,
 )
-from .coxa import adjust_coxa, attribute_coxa_buffer
 from .socket import get_front_coxa_socket_height, get_front_coxa_socket_width
 
 
-def extrude_legs(
+def build_basic(
     node: hou.SopNode,
 ) -> None:
     geo = node.geometry()
@@ -39,7 +39,7 @@ def extrude_legs(
     segment_sections = get_segment_sections(parent)
 
     for i in range(4):
-        _extrude_single_leg(
+        _build_single_leg_basic(
             node,
             geo,
             params,
@@ -51,7 +51,15 @@ def extrude_legs(
         )
 
 
-def _extrude_single_leg(
+def position_basic(
+    node: hou.SopNode,
+) -> None:
+    geo = node.geometry()
+    for i in range(4):
+        _position_single_leg(geo, i + 1)
+
+
+def _build_single_leg_basic(
     node: hou.SopNode,
     geo: hou.Geometry,
     params: Any,
@@ -62,8 +70,6 @@ def _extrude_single_leg(
     leg_offset: int,
 ) -> None:
     leg_idx = leg_offset + 1
-    pts, mid_pts, origin, direction = _get_leg_socket_frame(geo, leg_idx)
-
     param = _get_leg_param(
         params,
         control_params,
@@ -74,14 +80,19 @@ def _extrude_single_leg(
     )
     attributes = _get_leg_attributes(leg_idx)
 
-    (seg_tubes, thickness_pts, mem_pts), warnings = build_segment_bases(geo, param, attributes)
+    _, warnings = build_segment_bases(geo, param, attributes)
     for w in warnings:
         node.addWarning(w)
 
-    _orient_leg_points(seg_tubes, thickness_pts, mem_pts, origin, direction)
 
-    buffer_loop, pentagon_pts = adjust_coxa(node, pts, mid_pts, seg_tubes[0])
-    attribute_coxa_buffer(leg_idx, buffer_loop, pentagon_pts)
+def _position_single_leg(
+    geo: hou.Geometry,
+    leg_idx: int,
+) -> None:
+    _, _, origin, direction = _get_leg_socket_frame(geo, leg_idx)
+    q = rotation_to(hou.Vector3(0.0, 0.0, -1.0), direction)
+    for pt in _get_leg_points(geo, leg_idx):
+        pt.setPosition(q.rotate(pt.position()) + origin)
 
 
 def _get_leg_socket_frame(
@@ -110,25 +121,23 @@ def _get_leg_socket_frame(
     btm_mid = (pos_btm_sz + pos_btm_bz) / 2.0
     direction = hou.Vector3(top_mid.x() - btm_mid.x(), 0.0, top_mid.z() - btm_mid.z()).normalized()
     bottom_z_offset = (btm_mid - top_mid).dot(direction)
-    origin = top_mid + direction * bottom_z_offset
+    origin_xz = top_mid + direction * bottom_z_offset
+
+    p_u1, p_u2 = points_from_geo(
+        geo,
+        legsegmentedge(leg_idx, 1, 1, 4),
+        legsegmentedge(leg_idx, 1, 1, 3),
+    )
+    leg_top_y = (p_u1.position().y() + p_u2.position().y()) / 2.0
+    origin = hou.Vector3(origin_xz.x(), top_mid.y() - leg_top_y, origin_xz.z())
     return pts, mid_pts, origin, direction
 
 
-def _orient_leg_points(
-    seg_tubes: list[list[hou.Point]],
-    thickness_pts: list[hou.Point],
-    mem_pts: list[hou.Point],
-    origin: hou.Vector3,
-    direction: hou.Vector3,
-) -> None:
-    q = rotation_to(hou.Vector3(0.0, 0.0, -1.0), direction)
-    for seg in seg_tubes:
-        for pt in seg:
-            pt.setPosition(q.rotate(pt.position()) + origin)
-    for pt in thickness_pts:
-        pt.setPosition(q.rotate(pt.position()) + origin)
-    for pt in mem_pts:
-        pt.setPosition(q.rotate(pt.position()) + origin)
+def _get_leg_points(
+    geo: hou.Geometry,
+    leg_idx: int,
+) -> list[hou.Point]:
+    return points_start_with(geo, "id", (f"{ID.LEGSEGMENT}{leg_idx}", f"{ID.LEGMEMBRANE}{leg_idx}"))
 
 
 def _get_leg_param(

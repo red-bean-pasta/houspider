@@ -21,6 +21,9 @@ test/
 .aiassistant/tmp/
 .aiassistant/historybook/
 .aiassistant/archived/
+.agents/tmp/
+.agents/historybook/
+.agents/archived/
 
 utilities
 references
