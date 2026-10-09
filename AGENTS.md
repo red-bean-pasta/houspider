@@ -42,7 +42,7 @@
 - **Avoid Inline `hython -c`**:
   Use or generalize reusable utility scripts under `scripts/` (see [`scripts/README.md`](scripts/README.md)). This helps user flag commands as auto-approvable.
   If the command is unlikely to be reused again, use inline methods and ask for approval.
-  If the script expects reuse only within the current task, harbor it at `.aiassistant/tmp/`.
+  If the script expects reuse only within the current task, harbor it at `.agents/tmp/`.
   Analyze invoked commands and generalize reusable scripts at the end of each turn.
 
 - **Core Verification Workflow**:
