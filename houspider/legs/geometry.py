@@ -5,7 +5,7 @@ from houkit.parameterizer import get_parms
 
 from .attributes import Region
 from ..bases import attributes as base_attributes
-from ..helper import update_joint_limits
+from ..models import JointLimits
 
 
 def extract_right_leg_points(node: hou.SopNode) -> None:
@@ -28,15 +28,14 @@ def record_global_info(
 ) -> None:
     parent = get_parent(node)
     params = get_parms(parent)
-    update_joint_limits(
-        node.geometry(),
-        "leg_*",
-        params.min_flex_angles,
-        params.max_flex_angles,
-        params.min_yaw_angles,
-        params.max_yaw_angles,
-        params.rest_flex_ratios,
+    limits = JointLimits(
+        min_flex=tuple(params.min_flex_angles),
+        max_flex=tuple(params.max_flex_angles),
+        min_yaw=tuple(params.min_yaw_angles),
+        max_yaw=tuple(params.max_yaw_angles),
+        rest_ratios=tuple(params.rest_flex_ratios),
     )
+    limits.write_to_geometry(node.geometry(), "leg_*")
 
 
 

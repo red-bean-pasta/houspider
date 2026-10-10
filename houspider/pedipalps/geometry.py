@@ -7,7 +7,7 @@ from houkit.topologies.basic import remove_unused_points
 from .attributes import Region
 from ..attributes import GlobalAttrib
 from ..bases.attributes import basemaxillamembrane
-from ..helper import update_joint_limits
+from ..models import JointLimits
 
 
 def remove_noise_points(
@@ -39,18 +39,11 @@ def record_global_info(
     assert legs_geo and legs_geo.findGlobalAttrib(GlobalAttrib.JOINT_LIMITS), (
         "Expected legs geometry with joint_limits at input 1"
     )
-    leg_limits = legs_geo.dictAttribValue(GlobalAttrib.JOINT_LIMITS)["leg_*"]
+    leg_limits = JointLimits.from_geometry(legs_geo, "leg_*")
 
     # Pedipalps lack a metatarsus: map joints (coxa, trochanter, femur, patella, tibia, tarsus)
     pedipalp_indices = (0, 1, 2, 3, 4, 6)
-    update_joint_limits(
-        node.geometry(),
-        "pedipalp_*",
-        tuple(leg_limits["min_flex_angles"][i] for i in pedipalp_indices),
-        tuple(leg_limits["max_flex_angles"][i] for i in pedipalp_indices),
-        tuple(leg_limits["min_yaw_angles"][i] for i in pedipalp_indices),
-        tuple(leg_limits["max_yaw_angles"][i] for i in pedipalp_indices),
-        params.rest_flex_ratios,
-    )
+    pedipalp_limits = leg_limits.select(pedipalp_indices, params.rest_flex_ratios)
+    pedipalp_limits.write_to_geometry(node.geometry(), "pedipalp_*")
 
 

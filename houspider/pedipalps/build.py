@@ -3,6 +3,7 @@ from houkit.noder import add_fuse, add_mirror, add_output, add_reloadable_subnet
 from houkit.parameterizer import add_float_parm
 
 from . import geometry, topology
+from ..attributes import JointLimitKey
 from ..helper import rename_left_ids_node, sopify_chain
 
 
@@ -85,7 +86,7 @@ def add_parameters(subnet: hou.OpNode) -> None:
     )
     add_float_parm(
         subnet,
-        "rest_flex_ratios",
+        JointLimitKey.REST_FLEX_RATIOS.value,
         6,
         (0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
         (0.0, 1.0),

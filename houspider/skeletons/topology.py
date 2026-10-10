@@ -5,6 +5,7 @@ from houkit.attributer import add_point_attrib
 from houkit.topology import add_point
 
 from ..attributes import GlobalAttrib
+from ..models import JointLimits
 from .attributes import (
     BodyJoint,
     LegJoint,
@@ -83,11 +84,16 @@ def pose_rest_skeleton(node: hou.SopNode) -> None:
         return
 
     joint_limits = source_geo.dictAttribValue(GlobalAttrib.JOINT_LIMITS)
-    leg_limits = joint_limits.get("leg_*", joint_limits)
+    leg_data = joint_limits.get("leg_*", joint_limits)
+    leg_limits = JointLimits.from_dict(leg_data)
     rot_by_joint = _build_rot_by_joint(leg_limits, list(LegJoint))
 
-    pedipalp_limits = joint_limits.get("pedipalp_*")
-    pedipalp_rot_by_joint = _build_rot_by_joint(pedipalp_limits, list(PedipalpJoint)) if pedipalp_limits else {}
+    pedipalp_data = joint_limits.get("pedipalp_*")
+    pedipalp_rot_by_joint = (
+        _build_rot_by_joint(JointLimits.from_dict(pedipalp_data), list(PedipalpJoint))
+        if pedipalp_data
+        else {}
+    )
 
     pts = geo.points()
     rest_m4 = [_point_to_matrix4(p) for p in pts]
@@ -135,22 +141,14 @@ def pose_rest_skeleton(node: hou.SopNode) -> None:
 
 
 def _build_rot_by_joint(
-    limits: dict[str, Any],
+    limits: JointLimits,
     joints: Sequence[Any],
 ) -> dict[str, tuple[float, float, float]]:
-    min_flex = limits["min_flex_angles"]
-    max_flex = limits["max_flex_angles"]
-    min_yaw = limits["min_yaw_angles"]
-    max_yaw = limits["max_yaw_angles"]
-    rest_flex = limits.get(
-        "rest_flex_angles",
-        tuple(0.5 * (lo + hi) for lo, hi in zip(min_flex, max_flex)),
-    )
     rot_by_joint: dict[str, tuple[float, float, float]] = {}
-    for i in range(len(min_flex)):
+    for i in range(len(limits.min_flex)):
         jname = joints[i].value if hasattr(joints[i], "value") else str(joints[i])
-        rx = 180.0 - rest_flex[i]
-        ry = 0.5 * (min_yaw[i] + max_yaw[i])
+        rx = 180.0 - limits.rest_flex[i]
+        ry = 0.5 * (limits.min_yaw[i] + limits.max_yaw[i])
         rot_by_joint[jname] = (rx, ry, 0.0)
     return rot_by_joint
 

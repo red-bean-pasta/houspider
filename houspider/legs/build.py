@@ -10,7 +10,7 @@ from houkit.noder import (
 )
 from houkit.parameterizer import add_float_parm
 
-from ..attributes import LegSegment
+from ..attributes import JointLimitKey, LegSegment
 from houspider.helper import rename_left_ids_node, sopify_chain
 from . import topology
 
@@ -81,7 +81,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
     )
     add_float_parm(
         legs,
-        "min_flex_angles",
+        JointLimitKey.MIN_FLEX_ANGLES.value,
         7,
         (140, 180, 200, 30, 150, 95, 170),
         (0.0, None),
@@ -91,7 +91,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
     )
     add_float_parm(
         legs,
-        "max_flex_angles",
+        JointLimitKey.MAX_FLEX_ANGLES.value,
         7,
         (220, 180, 270, 160, 190, 178, 190),
         (0.0, None),
@@ -101,7 +101,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
     )
     add_float_parm(
         legs,
-        "min_yaw_angles",
+        JointLimitKey.MIN_YAW_ANGLES.value,
         7,
         (-15, -25, 0, 0, 0, 0, -20),
         (None, None),
@@ -111,7 +111,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
     )
     add_float_parm(
         legs,
-        "max_yaw_angles",
+        JointLimitKey.MAX_YAW_ANGLES.value,
         7,
         (15, 25, 0, 0, 0, 0, 20),
         (0.0, None),
@@ -121,7 +121,7 @@ def _add_parameters(legs: hou.OpNode) -> None:
     )
     add_float_parm(
         legs,
-        "rest_flex_ratios",
+        JointLimitKey.REST_FLEX_RATIOS.value,
         7,
         (0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 0.5),
         (0.0, 1.0),
