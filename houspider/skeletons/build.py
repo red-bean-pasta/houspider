@@ -140,7 +140,7 @@ def _add_multi_ik(
     ik.hdaModule().onComponentSourceUpdated({"node": ik, "parm": ik.parm("componentsource")})
 
     ik.parm("solver").set(1)
-    ik.parm("segments").set("leg_*")
+    ik.parm("segments").set("leg_* pedipalp_* abdomen*")
     ik.parm("usetwist").set(0)
 
     return ik

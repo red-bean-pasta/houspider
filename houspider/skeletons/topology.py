@@ -67,7 +67,12 @@ def add_ik_tags(node: hou.SopNode) -> None:
 
     for point in geo.points():
         name = point.stringAttribValue("name")
-        tag = "_".join(name.split("_")[:2]) if name.startswith("leg_") else ""
+        if name.startswith("leg_") or name.startswith("pedipalp_"):
+            tag = "_".join(name.split("_")[:2])
+        elif name in (BodyJoint.PEDICEL, BodyJoint.ABDOMEN):
+            tag = BodyJoint.ABDOMEN.value
+        else:
+            tag = ""
         point.setAttribValue(tags, (tag,) if tag else ())
 
 
