@@ -94,6 +94,22 @@ hython scripts/measure_geo.py /obj/spider/geometry/prosoma/base/rotate_middle_ed
   --pairs sternumrimmiddle1,basesternummiddle1 sternumrimmiddle2,basesternummiddle2
 ```
 
+### `inspect_skel.py`
+Inspects and diffs KineFX skeleton joints, hierarchy, local coordinate basis vectors, planarity, and poses.
+```shell
+# Inspect joint local basis vectors (X hinge, Y up, Z aim) and elevation angles
+hython scripts/inspect_skel.py /obj/spider/skeleton/orient_limb_skeletons -p "*leg_R1*"
+
+# Check chain coplanarity and out-of-plane deviation
+hython scripts/inspect_skel.py /obj/spider/skeleton/orient_limb_skeletons -p "*leg_R1*" --planarity
+
+# Display skeleton hierarchy tree
+hython scripts/inspect_skel.py /obj/spider/skeleton/orient_limb_skeletons --tree --no-axes
+
+# Diff posed skeleton against rest skeleton (displacements, relative Euler rotations, yaw shift)
+hython scripts/inspect_skel.py /obj/spider/skeleton/rig_pose --rest /obj/spider/skeleton/add_ik_tags -p "*leg_R1*"
+```
+
 ### `inspect_parms.py`
 Inspects node parameter values, labels, and default overrides on any node in a HIP file.
 ```shell

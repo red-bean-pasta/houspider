@@ -59,6 +59,7 @@
   - `inspect_geo.py`: Query points/primitives and attributes with filtering.
   - `diff_geo.py`: Stage & node diffing (point displacements, added/removed elements, attribute changes).
   - `measure_geo.py`: Distances, vectors, elevation to XZ plane, and edge perpendicularity / angles.
+  - `inspect_skel.py`: Skeleton joint hierarchy, local coordinate basis vectors, planarity, and pose diffing.
   - `run_stage.py`: Isolated geometry stage testing against an input node.
   - `inspect_symbol.py`: HOM and project symbol source and docstring introspection.
 
