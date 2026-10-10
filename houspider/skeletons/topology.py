@@ -83,11 +83,12 @@ def pose_rest_skeleton(node: hou.SopNode) -> None:
         return
 
     joint_limits = source_geo.dictAttribValue(GlobalAttrib.JOINT_LIMITS)
-    min_flex = joint_limits["min_flex_angles"]
-    max_flex = joint_limits["max_flex_angles"]
-    min_yaw = joint_limits["min_yaw_angles"]
-    max_yaw = joint_limits["max_yaw_angles"]
-    rest_flex = joint_limits.get(
+    leg_limits = joint_limits.get("leg_*", joint_limits)
+    min_flex = leg_limits["min_flex_angles"]
+    max_flex = leg_limits["max_flex_angles"]
+    min_yaw = leg_limits["min_yaw_angles"]
+    max_yaw = leg_limits["max_yaw_angles"]
+    rest_flex = leg_limits.get(
         "rest_flex_angles",
         tuple(0.5 * (lo + hi) for lo, hi in zip(min_flex, max_flex)),
     )

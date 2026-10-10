@@ -41,12 +41,14 @@ def record_global_info(
     )
 
     joint_limits = {
-        "min_flex_angles": min_flex,
-        "max_flex_angles": max_flex,
-        "min_yaw_angles": min_yaw,
-        "max_yaw_angles": max_yaw,
-        "rest_flex_ratios": rest_ratios,
-        "rest_flex_angles": rest_flex,
+        "leg_*": {
+            "min_flex_angles": min_flex,
+            "max_flex_angles": max_flex,
+            "min_yaw_angles": min_yaw,
+            "max_yaw_angles": max_yaw,
+            "rest_flex_ratios": rest_ratios,
+            "rest_flex_angles": rest_flex,
+        }
     }
     limits_attrib = add_global_attrib(
         geo,

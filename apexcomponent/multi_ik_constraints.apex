@@ -1,17 +1,26 @@
 limits, success = character.detailAttribValue_Dict("joint_limits")
+if not success:
+    raise error("Missing detail attribute 'joint_limits' on input character geometry.")
 
-min_flex: FloatArray = limits["min_flex_angles"]
-max_flex: FloatArray = limits["max_flex_angles"]
-min_yaw: FloatArray = limits["min_yaw_angles"]
-max_yaw: FloatArray = limits["max_yaw_angles"]
-rest_flex: FloatArray = limits["rest_flex_angles"]
+specs: Dict = {}
+if "min_flex_angles" in limits.keys():
+    specs["*"] = limits
+else:
+    specs = limits
 
 deg_to_rad = 0.017453292519943295
 
-solvers = graph.matchNodes("%callback(rig::MultiBoneIK)")
+for pattern in specs.keys():
+    chain_limits: Dict = specs[pattern]
+    min_flex: FloatArray = chain_limits["min_flex_angles"]
+    max_flex: FloatArray = chain_limits["max_flex_angles"]
+    min_yaw: FloatArray = chain_limits["min_yaw_angles"]
+    max_yaw: FloatArray = chain_limits["max_yaw_angles"]
+    rest_flex: FloatArray = chain_limits["rest_flex_angles"]
 
-for solver in solvers:
-    if solver.name().startsWith("leg_"):
+    solvers = graph.matchNodes(pattern + " & %callback(rig::MultiBoneIK)")
+
+    for solver in solvers:
         properties: Dict = {}
 
         for i in range(len(min_flex)):
@@ -33,3 +42,5 @@ for solver in solvers:
             }
 
         solver.setParms({"properties": properties})
+
+
