@@ -43,4 +43,8 @@ for pattern in specs.keys():
 
         solver.setParms({"properties": properties})
 
+    offsets = graph.matchNodes(pattern + "_ik_rest_offset")
+    for offset in offsets:
+        offset.setParms({"a": Matrix4(1.0)})
+
 
