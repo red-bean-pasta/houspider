@@ -24,6 +24,7 @@ test/
 .agents/tmp/
 .agents/historybook/
 .agents/archived/
+.agents/handoffs/
 
 utilities
 references
