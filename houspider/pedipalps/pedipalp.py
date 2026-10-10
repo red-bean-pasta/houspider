@@ -20,7 +20,7 @@ from ..bases.attributes import basemaxillamembrane
 from ..attributes import LegSegment, PedipalpSegment
 from ..helper import points_from_geo, prims_by_attr, set_point_id
 from ..legs.attributes import get_segment_sections
-from ..legs.socket import get_front_coxa_socket_width
+from ..legs.socket import get_front_coxa_socket_hw_ratio, get_front_coxa_socket_width
 from .socket import get_pedipalp_socket_size
 from ..segments.build import build_segment_bases
 from ..segments.models import LimbAttributes, LimbParam
@@ -132,9 +132,11 @@ def _get_pedipalp_param(
     control_params = get_parms(get_control(legs, "CONTROL"), use_tuple=False)
 
     base = pedipalp.input(0)
-    front_leg_coxa_length = get_front_coxa_socket_width(base.geometry()) * leg_params.coxa_length_ratio
+    base_geo = base.geometry()
+    front_leg_coxa_length = get_front_coxa_socket_width(base_geo) * leg_params.coxa_length_ratio
     pedipalp_coxa_length = front_leg_coxa_length * params.coxa_length
-    socket_size = get_pedipalp_socket_size(geo)
+    hw_ratio = get_front_coxa_socket_hw_ratio(base_geo)
+    socket_size = get_pedipalp_socket_size(geo, hw_ratio)
 
     length_ratios = tuple(params.segment_length_ratios)
     segment_sections = _select_pedipalp_segments(get_segment_sections(legs))
