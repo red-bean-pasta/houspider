@@ -120,6 +120,7 @@ The complete handle set is generated in Houdini from the builder modules. The co
 | `max_flex_angles` | `(180, 270, 160, 190, 178, 190)` | Maximum flex angle for each post-coxa segment joint. |
 | `min_yaw_angles` | `(0, 0, 0, 0, 0, 0)` | Minimum yaw angle for each post-coxa segment joint. |
 | `max_yaw_angles` | `(25, 0, 0, 0, 0, 20)` | Maximum yaw angle for each post-coxa segment joint. |
+| `rest_flex_ratios` | `(0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 0.5)` | Rest flex interpolation ratio between min and max flex angles for each joint (0=min, 1=max). |
 | `leg_width_ratios` | `(0.8, 0.7, 0.8)` | Coxa-width scale for legs 2–4 relative to the front coxa. |
 | `leg_length_ratios` | `(0.88, 0.9, 1.1)` | Coxa-length scale for legs 2–4 relative to the front coxa. |
 | `*_sections` | MultiParm Vector3 | Cross-sections `(length_ratio, width_ratio, height_ratio)` for each segment under the "Segments" folder. |

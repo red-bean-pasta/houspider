@@ -30,11 +30,23 @@ def record_global_info(
     geo = node.geometry()
 
     params = get_parms(parent)
+    min_flex = tuple(params.min_flex_angles)
+    max_flex = tuple(params.max_flex_angles)
+    min_yaw = tuple(params.min_yaw_angles)
+    max_yaw = tuple(params.max_yaw_angles)
+    rest_ratios = tuple(params.rest_flex_ratios)
+    rest_flex = tuple(
+        lo + r * (hi - lo)
+        for lo, hi, r in zip(min_flex, max_flex, rest_ratios)
+    )
+
     joint_limits = {
-        "min_flex_angles": tuple(params.min_flex_angles),
-        "max_flex_angles": tuple(params.max_flex_angles),
-        "min_yaw_angles": tuple(params.min_yaw_angles),
-        "max_yaw_angles": tuple(params.max_yaw_angles),
+        "min_flex_angles": min_flex,
+        "max_flex_angles": max_flex,
+        "min_yaw_angles": min_yaw,
+        "max_yaw_angles": max_yaw,
+        "rest_flex_ratios": rest_ratios,
+        "rest_flex_angles": rest_flex,
     }
     limits_attrib = add_global_attrib(
         geo,

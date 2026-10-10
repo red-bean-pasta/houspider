@@ -121,6 +121,16 @@ def _add_parameters(legs: hou.OpNode) -> None:
     )
     add_float_parm(
         legs,
+        "rest_flex_ratios",
+        7,
+        (0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 0.5),
+        (0.0, 1.0),
+        hou.parmNamingScheme.Base1,
+        label="Rest Flex Ratios",
+        help="Rest flex interpolation ratio between min and max flex angles for each segment joint (0=min, 1=max).",
+    )
+    add_float_parm(
+        legs,
         "leg_width_ratios",
         3,
         (0.8, 0.7, 0.8),
