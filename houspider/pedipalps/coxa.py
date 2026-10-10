@@ -9,7 +9,7 @@ from houkit.topology import fill_face
 from .attributes import pedipalpcoxabuffer, pedipalpsegmentedge, pedipalpsegmentsupport
 from ..bases.attributes import basemaxillamembrane
 from ..cheliceraes.attributes import cheliceraestartmembranesupport
-from ..helper import add_id_point, points_from_geo, positions_from_geo
+from ..helper import add_id_point, points_from_geo, positions_from_geo, set_point_id
 
 
 def delete_start_coxa_supports(
@@ -201,6 +201,10 @@ def _add_base_trapezoid(
     p3 = add_id_point(geo, pos_p3, pedipalpcoxabuffer(1, "base", 1))
     p4 = add_id_point(geo, pos_p4, pedipalpcoxabuffer(1, "base", 2))
 
+    if _is_trapezoid_inverted(m1, m2, p3, p4):
+        _swap_point_ids(p3, p4)
+        p3, p4 = p4, p3
+
     fill_face([m1, m2, p4, p3], reverse_order=True)
 
     return height
@@ -277,6 +281,23 @@ def _project_trapezoid_to_bottom(
     pos_p3 = pos_pp2 + offset_vec
 
     return pos_p4, pos_p3
+
+
+def _is_trapezoid_inverted(
+    m1: hou.Point,
+    m2: hou.Point,
+    p_base1: hou.Point,
+    p_base2: hou.Point,
+) -> bool:
+    u = (m2.position() - m1.position()).normalized()
+    return (p_base2.position() - p_base1.position()).dot(u) < 0
+
+
+def _swap_point_ids(p1: hou.Point, p2: hou.Point) -> None:
+    id1 = p1.stringAttribValue("id")
+    id2 = p2.stringAttribValue("id")
+    set_point_id(p1, id2)
+    set_point_id(p2, id1)
 
 
 def _add_front_face_point(
