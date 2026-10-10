@@ -1,9 +1,13 @@
 import hou
 from houkit.attributer import points_start_with
+from houkit.noder import get_parent
+from houkit.parameterizer import get_parms
 from houkit.topologies.basic import remove_unused_points
 
 from .attributes import Region
+from ..attributes import GlobalAttrib
 from ..bases.attributes import basemaxillamembrane
+from ..helper import update_joint_limits
 
 
 def remove_noise_points(
@@ -23,3 +27,30 @@ def cleanup(node: hou.SopNode) -> None:
             prim.setAttribValue("region", Region.PEDIPALPSEGMENT)
 
     remove_unused_points(geo)
+
+
+def record_global_info(
+    node: hou.SopNode,
+) -> None:
+    parent = get_parent(node)
+    params = get_parms(parent)
+
+    legs_geo = node.inputGeometry(1)
+    assert legs_geo and legs_geo.findGlobalAttrib(GlobalAttrib.JOINT_LIMITS), (
+        "Expected legs geometry with joint_limits at input 1"
+    )
+    leg_limits = legs_geo.dictAttribValue(GlobalAttrib.JOINT_LIMITS)["leg_*"]
+
+    # Pedipalps lack a metatarsus: map joints (coxa, trochanter, femur, patella, tibia, tarsus)
+    pedipalp_indices = (0, 1, 2, 3, 4, 6)
+    update_joint_limits(
+        node.geometry(),
+        "pedipalp_*",
+        tuple(leg_limits["min_flex_angles"][i] for i in pedipalp_indices),
+        tuple(leg_limits["max_flex_angles"][i] for i in pedipalp_indices),
+        tuple(leg_limits["min_yaw_angles"][i] for i in pedipalp_indices),
+        tuple(leg_limits["max_yaw_angles"][i] for i in pedipalp_indices),
+        params.rest_flex_ratios,
+    )
+
+

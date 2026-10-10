@@ -1,12 +1,15 @@
 import hou
+from typing import Any
 
 from houkit.noder import (
     add_merge,
     add_merge_fuse,
     add_recalculate_normal,
     add_reloadable_subnet,
+    sopify,
 )
 from houkit.nodes.sops import add_output
+from ..attributes import GlobalAttrib
 from ..abdomens.build import build as build_abdomen
 from ..legs.build import build as build_legs
 from ..pedicels.build import build as build_pedicel
@@ -34,7 +37,8 @@ def build(parent: hou.OpNode, name: str = "spider") -> hou.SopNode:
     )
     recalculated = add_recalculate_normal(spider, "recalculate_normals", fused)
     _add_subdivide(spider, "debug_subdivision", recalculated, depth=3)
-    output = add_output(spider, "OUTPUT_SPIDER", recalculated)
+    combined = _add_combine_joint_limits(spider, "combine_joint_limits", recalculated, legs, pedipalps)
+    output = add_output(spider, "OUTPUT_SPIDER", combined)
 
     output.setDisplayFlag(True)
     output.setRenderFlag(True)
@@ -56,3 +60,30 @@ def _add_subdivide(
     subdivide.setInput(0, p_input)
     subdivide.parm("iterations").set(depth)
     return subdivide
+
+
+def _add_combine_joint_limits(
+    parent: hou.OpNode,
+    name: str,
+    base_geo: hou.SopNode,
+    *limit_sources: hou.SopNode,
+) -> hou.SopNode:
+    node = sopify(parent, base_geo, combine_joint_limits)
+    for i, src in enumerate(limit_sources, 1):
+        node.setInput(i, src)
+    return node
+
+
+def combine_joint_limits(node: hou.SopNode) -> None:
+    geo = node.geometry()
+    combined: dict[str, Any] = {}
+    for idx in range(1, len(node.inputs())):
+        in_geo = node.inputGeometry(idx)
+        if in_geo and in_geo.findGlobalAttrib(GlobalAttrib.JOINT_LIMITS):
+            combined.update(in_geo.dictAttribValue(GlobalAttrib.JOINT_LIMITS))
+    if combined:
+        attrib = geo.findGlobalAttrib(GlobalAttrib.JOINT_LIMITS) or geo.addAttrib(
+            hou.attribType.Global, GlobalAttrib.JOINT_LIMITS, combined
+        )
+        geo.setGlobalAttribValue(attrib, combined)
+

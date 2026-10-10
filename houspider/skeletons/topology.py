@@ -1,4 +1,4 @@
-from typing import Callable, Sequence, Iterable
+from typing import Any, Callable, Iterable, Sequence
 
 import hou
 from houkit.attributer import add_point_attrib
@@ -84,22 +84,10 @@ def pose_rest_skeleton(node: hou.SopNode) -> None:
 
     joint_limits = source_geo.dictAttribValue(GlobalAttrib.JOINT_LIMITS)
     leg_limits = joint_limits.get("leg_*", joint_limits)
-    min_flex = leg_limits["min_flex_angles"]
-    max_flex = leg_limits["max_flex_angles"]
-    min_yaw = leg_limits["min_yaw_angles"]
-    max_yaw = leg_limits["max_yaw_angles"]
-    rest_flex = leg_limits.get(
-        "rest_flex_angles",
-        tuple(0.5 * (lo + hi) for lo, hi in zip(min_flex, max_flex)),
-    )
+    rot_by_joint = _build_rot_by_joint(leg_limits, list(LegJoint))
 
-    leg_joints = list(LegJoint)
-    rot_by_joint: dict[str, tuple[float, float, float]] = {}
-    for i in range(len(min_flex)):
-        jname = leg_joints[i].value
-        rx = 180.0 - rest_flex[i]
-        ry = 0.5 * (min_yaw[i] + max_yaw[i])
-        rot_by_joint[jname] = (rx, ry, 0.0)
+    pedipalp_limits = joint_limits.get("pedipalp_*")
+    pedipalp_rot_by_joint = _build_rot_by_joint(pedipalp_limits, list(PedipalpJoint)) if pedipalp_limits else {}
 
     pts = geo.points()
     rest_m4 = [_point_to_matrix4(p) for p in pts]
@@ -123,6 +111,11 @@ def pose_rest_skeleton(node: hou.SopNode) -> None:
                 if name.endswith(f"_{jname}"):
                     rx, ry, rz = rot
                     break
+        elif name.startswith("pedipalp_"):
+            for jname, rot in pedipalp_rot_by_joint.items():
+                if name.endswith(f"_{jname}"):
+                    rx, ry, rz = rot
+                    break
 
         r_mat = hou.hmath.buildRotate(rx, ry, rz)
         local_posed = r_mat * local_rest
@@ -139,6 +132,28 @@ def pose_rest_skeleton(node: hou.SopNode) -> None:
         pt.setAttribValue("transform", m3.asTuple())
 
     _update_local_transforms(geo)
+
+
+def _build_rot_by_joint(
+    limits: dict[str, Any],
+    joints: Sequence[Any],
+) -> dict[str, tuple[float, float, float]]:
+    min_flex = limits["min_flex_angles"]
+    max_flex = limits["max_flex_angles"]
+    min_yaw = limits["min_yaw_angles"]
+    max_yaw = limits["max_yaw_angles"]
+    rest_flex = limits.get(
+        "rest_flex_angles",
+        tuple(0.5 * (lo + hi) for lo, hi in zip(min_flex, max_flex)),
+    )
+    rot_by_joint: dict[str, tuple[float, float, float]] = {}
+    for i in range(len(min_flex)):
+        jname = joints[i].value if hasattr(joints[i], "value") else str(joints[i])
+        rx = 180.0 - rest_flex[i]
+        ry = 0.5 * (min_yaw[i] + max_yaw[i])
+        rot_by_joint[jname] = (rx, ry, 0.0)
+    return rot_by_joint
+
 
 
 def orient_limb_skeletons(node: hou.SopNode) -> None:

@@ -2,7 +2,7 @@ import hou
 from houkit.noder import add_fuse, add_mirror, add_output, add_reloadable_subnet, sopify
 from houkit.parameterizer import add_float_parm
 
-from . import topology
+from . import geometry, topology
 from ..helper import rename_left_ids_node, sopify_chain
 
 
@@ -40,7 +40,10 @@ def build(
     fused = add_fuse(pedipalp, "fuse_sockets", cleaned_up)
     mirrored = add_mirror(pedipalp, "mirror_left_pedipalps", fused, (1, 0, 0), True, False)
     renamed = sopify(pedipalp, mirrored, rename_left_ids_node)
-    add_output(pedipalp, "OUT_PEDIPALPS", renamed)
+    recorded = sopify(pedipalp, renamed, geometry.record_global_info)
+    recorded.setInput(0, renamed, 0)
+    recorded.setInput(1, pedipalp.indirectInputs()[1], 0)
+    add_output(pedipalp, "OUT_PEDIPALPS", recorded)
     pedipalp.layoutChildren()
     return pedipalp
 
@@ -80,6 +83,18 @@ def add_parameters(subnet: hou.OpNode) -> None:
         label="Endite Surface Size",
         help="Size of the added endite surface faces.",
     )
+    add_float_parm(
+        subnet,
+        "rest_flex_ratios",
+        6,
+        (0.5, 0.5, 0.5, 0.5, 0.5, 0.5),
+        (0.0, 1.0),
+        hou.parmNamingScheme.Base1,
+        label="Rest Flex Ratios",
+        help="Rest flex interpolation ratio between min and max flex angles for each pedipalp joint (0=min, 1=max).",
+    )
+
+
 
 
 def _add_controls(parent: hou.SopNode) -> hou.SopNode:
