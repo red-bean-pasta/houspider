@@ -34,3 +34,26 @@ For pedipalp segment 1 (coxa):
   - At any section $k$, `w_k = socket_width * w_ratio_k` and `h_k = socket_height * h_ratio_k`.
   - Since `socket_height / socket_width = hw_ratio` for both pedipalp and front leg, the aspect ratio `h_k / w_k = hw_ratio * (h_ratio_k / w_ratio_k)` is identical across both front leg and pedipalp end coxa sections.
 
+## Coxa Length & Bottom Trim Mechanics
+- **Parameter Calculation**:
+  `pedipalp_coxa_length = front_leg_coxa_socket_width * legs.parm("coxa_length_ratio") * pedipalps.parm("coxa_length")`.
+- **Initial Build**: In `build_basic`, coxa tube is constructed along `-Z` with length `pedipalp_coxa_length` from start loop ($Z=0$) to end section ($Z=-\text{pedipalp\_coxa\_length}$).
+- **Trimming (`trim_bottom_side_length`)**:
+  - `trim_length = length_xz(bm3 - bm1)`
+  - Shifts all pedipalp points past loop 1 forward by `+trim_length` along $Z$.
+  - This shortens the upper span from start to end to: `upper_length = pedipalp_coxa_length - trim_length`.
+- **Positioning (`position_basic`)**:
+  - Aligns `start 3` (Right Upper / lateral upper corner) to `bm4` (`basemaxillamembrane(4)`).
+  - Upper side length from `bm4` to coxa end section is `pedipalp_coxa_length - trim_length`.
+- **Bottom Span**:
+  - Bottom attachment at `bm1` sits `~trim_length` posteriorly behind `bm4`.
+  - The bottom reach from `bm1` to coxa end section is `(pedipalp_coxa_length - trim_length) + offset_axial(bm4 - bm1) ≈ pedipalp_coxa_length`.
+
+## Base Trapezoid Inversion Handling
+- In `_add_base_trapezoid`, `pos_p4` is the ray intersection point and `pos_p3` is its mirrored counterpart across `m1 - m2`.
+- When `pos_p4` steps over `pos_p3` along `u = (m2 - m1).normalized()`, the quad `[m1, m2, p4, p3]` degenerates into an hourglass shape.
+- Handled by `_is_trapezoid_inverted`: tests `(p_base2 - p_base1).dot(u) < 0`.
+- If inverted, `_swap_point_ids(p3, p4)` swaps point IDs between the points and exchanges `p3, p4 = p4, p3`, so that `p4` (`base 2`) always resides near `m2` and `p3` (`base 1`) resides near `m1`, preserving proper quad topology without crossing.
+
+
+
