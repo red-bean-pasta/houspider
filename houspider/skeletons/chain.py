@@ -53,12 +53,12 @@ def get_pedipalp_bone_positions(
 ) -> list[hou.Vector3]:
     side = 1 if is_right else -1
 
-    # 1. Socket hinge: midpoint of the two highest socket points
-    left_pts = points_start_with(geo, "id", basemaxillamembrane("-"))
-    socket_pts = [p for p in points_start_with(geo, "id", basemaxillamembrane()) if p not in left_pts] if is_right else left_pts
-    assert len(socket_pts) == 4, f"Expected 4 socket points for pedipalp {'R' if is_right else 'L'}, got {len(socket_pts)}"
-    sorted_by_y = sorted(socket_pts, key=lambda p: p.position().y())
-    socket_hinge = (sorted_by_y[2].position() + sorted_by_y[3].position()) * 0.5
+    # 1. Socket hinge: midpoint of top corners (ru, lu) of maxilla socket
+    socket_hinge = _midpoint_from_ids(
+        geo,
+        basemaxillamembrane(side * 3),
+        basemaxillamembrane(side * 4),
+    )
 
     # 2. Joint hinges 1..5: midpoint of top corners (ru, lu) of former segment end inset
     joint_hinges = [
