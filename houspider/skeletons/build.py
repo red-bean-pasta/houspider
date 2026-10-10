@@ -1,4 +1,3 @@
-import math
 from pathlib import Path
 
 import hou
@@ -6,7 +5,6 @@ import hou
 from houkit.noder import add_merge_fuse, add_output, add_reloadable_subnet, sopify
 from ..attributes import GlobalAttrib
 from . import skinning, topology
-from .attributes import LegJoint
 
 # The skeleton design in Houdini is so over-engineered...
 
@@ -31,8 +29,9 @@ def build(
     oriented = sopify(skeleton, rig_doctor, topology.orient_limb_skeletons)
     tagged = sopify(skeleton, oriented, topology.add_ik_tags)
 
-    joint_limits = input_node.geometry().attribValue(GlobalAttrib.JOINT_LIMITS)
-    posed_skeleton = _add_rig_pose(skeleton, "rig_pose", tagged, joint_limits)
+    posed_skeleton = sopify(skeleton, tagged, topology.pose_rest_skeleton)
+    posed_skeleton.setInput(0, tagged, 0)
+    posed_skeleton.setInput(1, source, 0)
 
     captured_skin = skinning.capture_skin(skeleton, source)
     posed_skin = _add_skin_deform(skeleton, "deform_skin", captured_skin, tagged, posed_skeleton)
@@ -40,13 +39,13 @@ def build(
     posed_extruded.setInput(0, posed_skin, 0)
     posed_extruded.setInput(1, captured_skin, 0)
     character = _add_pack_character(skeleton, "pack_character", posed_extruded, posed_skeleton)
+    character_with_limits = _add_copy_joint_limits(skeleton, "copy_limits_to_character", character, source)
 
-    multi_ik = _add_multi_ik(skeleton, "multi_ik", character)
+    multi_ik = _add_multi_ik(skeleton, "multi_ik", character_with_limits)
     multi_ik_constraints = _add_multi_ik_constraints(
         skeleton,
         "multi_ik_constraints",
         multi_ik,
-        joint_limits,
     ) # Multi IK ships an internal Multi Bone IK but doesn't expose joint constraints APIs
 
     scene = _add_scene_add_character(skeleton, "scene_add_character", multi_ik_constraints)
@@ -78,36 +77,6 @@ def _add_rig_doctor(
     rd.parm("reorienttochild").set(1)
     rd.parm("outputparentidx").set(1)
     return rd
-
-
-def _add_rig_pose(
-    parent: hou.OpNode,
-    name: str,
-    input_node: hou.SopNode,
-    joint_limits: dict[str, tuple[float, ...]],
-) -> hou.SopNode:
-    rp = parent.createNode("kinefx::rigpose", name)
-    rp.setInput(0, input_node)
-
-    min_flex = joint_limits["min_flex_angles"]
-    max_flex = joint_limits["max_flex_angles"]
-    min_yaw = joint_limits["min_yaw_angles"]
-    max_yaw = joint_limits["max_yaw_angles"]
-    leg_joints = list(LegJoint)
-
-    count = len(min_flex)
-    rp.parm("transformations").set(count)
-    for index in range(count):
-        joint_name = leg_joints[index].value
-        lo_flex, hi_flex = min_flex[index], max_flex[index]
-        lo_yaw, hi_yaw = min_yaw[index], max_yaw[index]
-        rx = 180.0 - 0.5 * (lo_flex + hi_flex)
-        ry = 0.5 * (lo_yaw + hi_yaw)
-
-        rp.parm(f"group{index}").set(f"@name=*_{joint_name}")
-        rp.parmTuple(f"r{index}").set((rx, ry, 0.0))
-
-    return rp
 
 
 def _add_skin_deform(
@@ -143,6 +112,20 @@ def _add_pack_character(
     return pack
 
 
+def _add_copy_joint_limits(
+    parent: hou.OpNode,
+    name: str,
+    character: hou.SopNode,
+    source: hou.SopNode,
+) -> hou.SopNode:
+    copy_node = parent.createNode("attribcopy", name)
+    copy_node.setInput(0, character)
+    copy_node.setInput(1, source)
+    copy_node.parm("attribname").set(GlobalAttrib.JOINT_LIMITS)
+    copy_node.parm("class").set(0) # detail
+    return copy_node
+
+
 def _add_multi_ik(
     parent: hou.OpNode,
     name: str,
@@ -167,7 +150,6 @@ def _add_multi_ik_constraints(
     parent: hou.OpNode,
     name: str,
     input_node: hou.SopNode,
-    joint_limits: dict[str, tuple[float, ...]],
 ) -> hou.SopNode:
     constraints = parent.createNode("apex::autorigcomponent::3.0", name)
     constraints.parm("inputguidename").set("Guides.skel")
@@ -184,34 +166,6 @@ def _add_multi_ik_constraints(
         "node": constraints,
         "parm": constraints.parm("componentsource"),
     })
-
-    min_flex = joint_limits["min_flex_angles"]
-    max_flex = joint_limits["max_flex_angles"]
-    min_yaw = joint_limits["min_yaw_angles"]
-    max_yaw = joint_limits["max_yaw_angles"]
-    assert len(min_flex) == len(max_flex) == len(min_yaw) == len(max_yaw), "Joint-limit arrays must have equal lengths."
-    joint_limit_specs = tuple(zip(min_flex, max_flex, min_yaw, max_yaw))
-    assert len(joint_limit_specs) == len(LegJoint) - 1, "Expected one constraint for each leg joint through the tarsus."
-
-    count = len(joint_limit_specs)
-    constraints.parm("limits").set(count)
-    for index, (lo_flex, hi_flex, lo_yaw, hi_yaw) in enumerate(joint_limit_specs, 1):
-        mid_flex = 0.5 * (lo_flex + hi_flex)
-        mid_yaw = 0.5 * (lo_yaw + hi_yaw)
-
-        # Limits relative to the neutral rest orientation (rx = 180 - mid_flex, ry = mid_yaw)
-        constraints.parmTuple(f"lower{index}").set((
-            math.radians(mid_flex - hi_flex),
-            math.radians(lo_yaw - mid_yaw),
-            -math.pi,
-        ))
-        constraints.parmTuple(f"upper{index}").set((
-            math.radians(mid_flex - lo_flex),
-            math.radians(hi_yaw - mid_yaw),
-            math.pi,
-        ))
-        constraints.parmTuple(f"restangle{index}").set((0.0, 0.0, 0.0))
-
     return constraints
 
 

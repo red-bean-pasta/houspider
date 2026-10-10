@@ -4,6 +4,7 @@ import hou
 from houkit.attributer import add_point_attrib
 from houkit.topology import add_point
 
+from ..attributes import GlobalAttrib
 from .attributes import (
     BodyJoint,
     LegJoint,
@@ -68,6 +69,70 @@ def add_ik_tags(node: hou.SopNode) -> None:
         name = point.stringAttribValue("name")
         tag = "_".join(name.split("_")[:2]) if name.startswith("leg_") else ""
         point.setAttribValue(tags, (tag,) if tag else ())
+
+
+def pose_rest_skeleton(node: hou.SopNode) -> None:
+    geo = node.geometry()
+    source_geo = node.inputGeometry(1) or geo
+    if not source_geo.findGlobalAttrib(GlobalAttrib.JOINT_LIMITS):
+        return
+
+    joint_limits = source_geo.dictAttribValue(GlobalAttrib.JOINT_LIMITS)
+    min_flex = joint_limits["min_flex_angles"]
+    max_flex = joint_limits["max_flex_angles"]
+    min_yaw = joint_limits["min_yaw_angles"]
+    max_yaw = joint_limits["max_yaw_angles"]
+    rest_flex = joint_limits.get(
+        "rest_flex_angles",
+        tuple(0.5 * (lo + hi) for lo, hi in zip(min_flex, max_flex)),
+    )
+
+    leg_joints = list(LegJoint)
+    rot_by_joint: dict[str, tuple[float, float, float]] = {}
+    for i in range(len(min_flex)):
+        jname = leg_joints[i].value
+        rx = 180.0 - rest_flex[i]
+        ry = 0.5 * (min_yaw[i] + max_yaw[i])
+        rot_by_joint[jname] = (rx, ry, 0.0)
+
+    pts = geo.points()
+    rest_m4 = [_point_to_matrix4(p) for p in pts]
+    posed_m4 = [hou.Matrix4(1.0)] * len(pts)
+
+    for i, pt in enumerate(pts):
+        pidx = pt.attribValue("parent_idx")
+        m_rest = rest_m4[i]
+        if pidx < 0:
+            mp_rest = hou.Matrix4(1.0)
+            mp_posed = hou.Matrix4(1.0)
+        else:
+            mp_rest = rest_m4[pidx]
+            mp_posed = posed_m4[pidx]
+
+        local_rest = m_rest * mp_rest.inverted()
+        name = pt.stringAttribValue("name")
+        rx, ry, rz = 0.0, 0.0, 0.0
+        if name.startswith("leg_"):
+            for jname, rot in rot_by_joint.items():
+                if name.endswith(f"_{jname}"):
+                    rx, ry, rz = rot
+                    break
+
+        r_mat = hou.hmath.buildRotate(rx, ry, rz)
+        local_posed = r_mat * local_rest
+        mc_posed = local_posed * mp_posed
+        posed_m4[i] = mc_posed
+
+        pos = hou.Vector3(mc_posed.at(3, 0), mc_posed.at(3, 1), mc_posed.at(3, 2))
+        pt.setPosition(pos)
+        m3 = hou.Matrix3((
+            mc_posed.at(0, 0), mc_posed.at(0, 1), mc_posed.at(0, 2),
+            mc_posed.at(1, 0), mc_posed.at(1, 1), mc_posed.at(1, 2),
+            mc_posed.at(2, 0), mc_posed.at(2, 1), mc_posed.at(2, 2),
+        ))
+        pt.setAttribValue("transform", m3.asTuple())
+
+    _update_local_transforms(geo)
 
 
 def orient_limb_skeletons(node: hou.SopNode) -> None:
