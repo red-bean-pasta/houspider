@@ -39,14 +39,14 @@ def prepare_coxa_base_trapezoid(
 
 def fill_bottom_right_face(node: hou.SopNode) -> None:
     geo: hou.Geometry = node.geometry()
-    es4, c2, m1, cb = points_from_geo(
+    es4, c1, m1, cb = points_from_geo(
         geo,
         pedipalpsegmentsupport(1, 1, -1, 2),
-        pedipalpcoxabuffer(1, "base", 2),
+        pedipalpcoxabuffer(1, "base", 1),
         basemaxillamembrane(1),
         pedipalpcoxabuffer(1, "bottom"),
     )
-    fill_face([es4, cb, c2, m1])
+    fill_face([es4, cb, c1, m1])
 
 
 def fill_back_face(node: hou.SopNode) -> None:
@@ -145,9 +145,9 @@ def fill_maxilla_faces(node: hou.SopNode) -> None:
         geo,
         *[pedipalpcoxabuffer(1, "maxilla", i + 1) for i in range(6)],
     )
-    fill_face([p0, m2, ct1, p4])
-    fill_face([p4, ct1, ct2, p3])
-    fill_face([p3, ct2, cb, p2])
+    fill_face([p0, m2, ct2, p4])
+    fill_face([p4, ct2, ct1, p3])
+    fill_face([p3, ct1, cb, p2])
     fill_face([p2, cb, cfb, p5])
     fill_face([p5, cfb, cf, p1])
     fill_face([p1, cf, m2, p0])
@@ -201,7 +201,7 @@ def _add_base_trapezoid(
     p3 = add_id_point(geo, pos_p3, pedipalpcoxabuffer(1, "base", 1))
     p4 = add_id_point(geo, pos_p4, pedipalpcoxabuffer(1, "base", 2))
 
-    fill_face([m1, m2, p3, p4], reverse_order=True)
+    fill_face([m1, m2, p4, p3], reverse_order=True)
 
     return height
 
@@ -314,18 +314,15 @@ def _get_maxilla_pole(node: hou.SopNode) -> hou.Vector3:
     pedipalp = get_parent(node)
     length_ratio = get_float_parm(pedipalp, "endite_length_ratio")
 
-    e1, e2, e3, m1, m2, m4, ct2 = points_from_geo(
+    e1, e2, e3, m2, ct2 = points_from_geo(
         geo,
         pedipalpsegmentedge(1, 1, -1, 1),
         pedipalpsegmentedge(1, 1, -1, 4),
         pedipalpsegmentedge(1, 1, -1, 3),
-        basemaxillamembrane(1),
         basemaxillamembrane(2),
-        basemaxillamembrane(4),
         pedipalpcoxabuffer(1, "base", 2),
     )
-    direction = m4.position() - m1.position()
-    direction = hou.Vector3(direction.x(), 0, direction.z())
+    direction = _get_coxa_base_direction(geo)
 
     m2_pos = m2.position()
     hit = line_intersect_face(
