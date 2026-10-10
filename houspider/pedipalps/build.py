@@ -49,7 +49,7 @@ def add_parameters(subnet: hou.OpNode) -> None:
     add_float_parm(
         subnet,
         "coxa_length",
-        default=0.8,
+        default=0.75,
         min_max=(0.0, None),
         label="Coxa Length",
         help="Coxa length evaluated against front leg coxa length.",
@@ -58,7 +58,7 @@ def add_parameters(subnet: hou.OpNode) -> None:
         subnet,
         "segment_length_ratios",
         5,
-        (0.17, 0.8, 0.4, 0.45, 0.4),
+        (0.17, 0.8, 0.4, 0.45, 0.25),
         (0.0, None),
         hou.parmNamingScheme.Base1,
         label="Segment Lengths",
