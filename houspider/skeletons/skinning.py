@@ -1,5 +1,8 @@
-import hou
+import math
+import re
 from collections.abc import Callable
+
+import hou
 from hou import OpNode, SopNode
 from houkit.noder import sopify
 
@@ -36,6 +39,81 @@ def assign_skin_weights(node: SopNode) -> None:
     _skin_legs(geo, bone_indexes, weights)
     _skin_pedipalps(geo, bone_indexes, weights)
     _write_capture_attributes(geo, bone_names, weights)
+
+
+def extrude_deformed_membranes(node: SopNode) -> None:
+    geo = node.geometry()
+    inputs = node.inputs()
+    rest_geo = inputs[1].geometry() if len(inputs) > 1 and inputs[1] is not None else None
+    _extrude_membrane_midpoints(geo, rest_geo)
+
+
+def _extrude_membrane_midpoints(geo: hou.Geometry, rest_geo: hou.Geometry | None) -> None:
+    id_attr = geo.findPointAttrib("id")
+    if id_attr is None:
+        return
+
+    pts_by_id = {p.stringAttribValue(id_attr): p for p in geo.points()}
+    rest_pts_by_id = (
+        {p.stringAttribValue("id"): p for p in rest_geo.points() if rest_geo.findPointAttrib("id")}
+        if rest_geo is not None
+        else pts_by_id
+    )
+
+    prefixes = set()
+    for pid in pts_by_id.keys():
+        match = re.match(r"^((?:leg|pedipalp)membrane[^_]+_\d+)_mid_[12]$", pid)
+        if match:
+            prefixes.add(match.group(1))
+
+    for prefix in prefixes:
+        _extrude_single_membrane_joint(prefix, pts_by_id, rest_pts_by_id)
+
+
+def _extrude_single_membrane_joint(
+    prefix: str,
+    pts_by_id: dict[str, hou.Point],
+    rest_pts_by_id: dict[str, hou.Point],
+) -> None:
+    for corner in (1, 2):
+        top_corner = 4 if corner == 1 else 3
+        pid_mid = f"{prefix}_mid_{corner}"
+        pid_f = f"{prefix}_1_{corner}"
+        pid_l = f"{prefix}_-1_{corner}"
+        pid_top = f"{prefix}_mid_{top_corner}"
+
+        p_mid = pts_by_id.get(pid_mid)
+        p_f = pts_by_id.get(pid_f)
+        p_l = pts_by_id.get(pid_l)
+        p_top = pts_by_id.get(pid_top)
+
+        rest_p_f = rest_pts_by_id.get(pid_f)
+        rest_p_l = rest_pts_by_id.get(pid_l)
+
+        if not (p_mid and p_f and p_l and p_top and rest_p_f and rest_p_l):
+            continue
+
+        l_rest_gap = rest_p_f.position().distanceTo(rest_p_l.position())
+        pos_f = p_f.position()
+        pos_l = p_l.position()
+        pos_top = p_top.position()
+
+        gap_vec = pos_l - pos_f
+        d_gap = gap_vec.length()
+        if d_gap >= l_rest_gap or d_gap < 1e-6:
+            continue
+
+        chord_center = (pos_f + pos_l) * 0.5
+        gap_dir = gap_vec.normalized()
+
+        outward_dir = chord_center - pos_top
+        outward_dir = outward_dir - gap_dir * outward_dir.dot(gap_dir)
+        if outward_dir.length() < 1e-6:
+            continue
+        outward_dir = outward_dir.normalized()
+
+        h = 0.5 * math.sqrt(l_rest_gap ** 2 - d_gap ** 2)
+        p_mid.setPosition(chord_center + outward_dir * h)
 
 
 def _skin_body(

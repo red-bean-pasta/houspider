@@ -28,14 +28,18 @@ def build(
     fused = add_merge_fuse(skeleton, "merge_fuse_skeletons", body_skel, legs_skel, pedipalps_skel)
 
     rig_doctor = _add_rig_doctor(skeleton, "rig_doctor", fused)
-    tagged = sopify(skeleton, rig_doctor, topology.add_ik_tags)
+    oriented = sopify(skeleton, rig_doctor, topology.orient_limb_skeletons)
+    tagged = sopify(skeleton, oriented, topology.add_ik_tags)
 
     joint_limits = input_node.geometry().attribValue(GlobalAttrib.JOINT_LIMITS)
     posed_skeleton = _add_rig_pose(skeleton, "rig_pose", tagged, joint_limits)
 
     captured_skin = skinning.capture_skin(skeleton, source)
     posed_skin = _add_skin_deform(skeleton, "deform_skin", captured_skin, tagged, posed_skeleton)
-    character = _add_pack_character(skeleton, "pack_character", posed_skin, posed_skeleton)
+    posed_extruded = sopify(skeleton, posed_skin, skinning.extrude_deformed_membranes)
+    posed_extruded.setInput(0, posed_skin, 0)
+    posed_extruded.setInput(1, captured_skin, 0)
+    character = _add_pack_character(skeleton, "pack_character", posed_extruded, posed_skeleton)
 
     multi_ik = _add_multi_ik(skeleton, "multi_ik", character)
     multi_ik_constraints = _add_multi_ik_constraints(
@@ -48,8 +52,12 @@ def build(
     scene = _add_scene_add_character(skeleton, "scene_add_character", multi_ik_constraints)
     animator = _add_scene_animate(skeleton, "scene_animate", scene)
 
-    output = add_output(skeleton, "OUT_EVALUATED", animator)
-    output.setInput(0, animator, 1)
+    evaluated_skin = sopify(skeleton, animator, skinning.extrude_deformed_membranes)
+    evaluated_skin.setInput(0, animator, 1)
+    evaluated_skin.setInput(1, captured_skin, 0)
+
+    output = add_output(skeleton, "OUT_EVALUATED", evaluated_skin)
+    output.setInput(0, evaluated_skin, 0)
 
     skeleton.layoutChildren()
     return skeleton
