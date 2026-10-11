@@ -1,0 +1,7 @@
+- Add a complete subdivision workflow; the authored topology is currently low-poly.
+- Add eyeballs.
+- ~~Improve the layout of the control-handle parameters.~~
+- ~~Add support loops for leg coxas.~~
+- ~~add IK.~~
+- ~~Add flexing leg support. Legs are segmented and include membranes, but currently extend directly from the body.~~
+- ~~Add leg-segment section variance. Segments currently behave like tubes; the membrane workflow needs narrower ends that grow toward thicker sections.~~

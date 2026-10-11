@@ -5,7 +5,7 @@
 - **Houdini Environment**:
   - Python API: `hou`
   - Python Executable: `hython`
-  - Documentation command: `hhelp html <path>` (e.g. `hhelp html /nodes/sop/kinefx--capturepackedgeo.html`)
+  - Documentation command: Search with `hhelp search "<term>"` and read with `hhelp textify -o <file> <path>` (see `hhelp-cli.md`). Raw `hhelp html` outputs unrendered HTML boilerplate.
 - **Node Network**:
   - Primary network scope lives under `.../models/spider/generator/`.
   - Node generation avoids hardcoded Python/VEX SOPs, instead relying on `sopify` and `sopify_chain` from `houkit.noder` and `houspider.helper`.
