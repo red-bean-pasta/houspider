@@ -1,17 +1,16 @@
 # Houspider
 
-A procedural spider model generator for SideFX Houdini. It builds a biologically plausible spider from Python and Houdini geometry attributes, then exposes the most useful shape and topology controls as editable Houdini parameters.
+A procedural spider model generator for SideFX Houdini. It exposes the most useful shape and topology controls as editable Houdini parameters. 
 
-The final model is built as a Houdini node network, so the construction remains easy to inspect and debug.
+Adjust the parameters to explore different spider shapes. Enter `obj/spider/skeleton/animate_scene` and enable Animate View to pose the limbs.
 
-Adjust the handles to explore different spider shapes without rebuilding the model by hand.
-
+This project wish to explore and experiment with fully procedural, code-driven organic modeling.
 
 ## How it works
 
-The generator uses Houdini Python to create and connect the modeling network. Point, primitive, and global attributes identify anatomical regions and construction points as geometry moves through the network. The builder modules use those attributes to construct surfaces, connect regions, and expose controls on the generated nodes.
+The generator uses Houdini Python (Houdini Object Model) to create and connect the modeling network. It heavily relies on Houdini's attributing system to identify points and faces. It still builds in node networks to mkae inspection and debugging easy.
 
-The project uses [`houkit`](https://github.com/red-bean-pasta/houkit) for reusable Houdini node, parameter, attribute, and reloadable-subnet helpers.
+The project uses [`houkit`](https://github.com/red-bean-pasta/houkit) for reusable Houdini node, parameter, and attribute helpers.
 
 
 ## Quick start
@@ -38,101 +37,65 @@ The model is then output to `test/test.hip`.
 
 ## Examples and topology views
 
-Different parameter values can produce noticeably different body proportions and leg arrangements:
-
-![Spider variant 1](docs/images/variant_example1.png)
-![Spider variant 2](docs/images/variant_example2.png)
-
-Wireframe views of the generated low-poly topology:
-
-![Top perspective wireframe](docs/images/top_perspective_wireframe.png)
-![Bottom perspective wireframe](docs/images/bottom_perspective_wireframe.png)
-![Top wireframe](docs/images/top_wireframe.png)
-![Bottom wireframe](docs/images/bottom_wireframe.png)
-
+![Side](docs/images/side_posed_wireframe.png)
+![Top](docs/images/top_posed_wireframe.png)
+![Bottom](docs/images/bottom_posed_wireframe.png)
+![Posing](docs/images/pedipalp_ik_demo.webp)
 
 ## Current limitations and TODOs
 
-- Improve the layout of the control-handle parameters.
-- Add a complete subdivision workflow; the authored topology is currently low-poly.
-- Add support loops for leg coxas.
+- Add a complete subdivision workflow; it's currently low-poly.
 - Add eyeballs.
-- Add flexing leg support. Legs are segmented and include membranes, but currently extend directly from the body.
-- Add leg-segment section variance. Segments currently behave like tubes; the membrane workflow needs narrower ends that grow toward thicker sections.
 
 
 ## Parameter reference
 
-The complete handle set is generated in Houdini from the builder modules. The controls below are the most useful ones for shaping the model.
+These top-level parameters on `/obj/spider` let you shape the body, limbs, and poses without diving into node networks.
 
-### Sternum & Base
+### Prosoma & Carapace (Head & Main Body)
 
-| Parameter | Default | Description |
-| --- | ---: | --- |
-| `front_back_length_ratios` | `(1.85, 1.6)` | Anterior and posterior sternum lengths relative to sternum half-width. |
-| `spine_depth_ratio` | `0.25` | Maximum center-spine depression relative to sternum half-width. |
-| `coxa_flap_extension_ratio` | `1.63` | Outward coxa-flap reach relative to sternum rim-edge length. |
-| `coxa_flap_rise_angle` | `12` | Coxa-flap rise angle in degrees. |
+| Parameter | Description |
+| --- | --- |
+| `Front / Back Length` | Length of the front and back of the main body. |
+| `Top Height` | How tall the upper body is. |
+| `Top Width / Length` | Width and length of the top surface. |
+| `Chelicerae Height` | How high the fangs sit on the body. |
 
-### Dorsal
+### Chelicerae (Fangs)
 
-| Parameter | Default | Description |
-| --- | ---: | --- |
-| `height_ratio` | `0.375` | Dorsal top height relative to the base-to-chelicerae span. |
-| `top_width_length_ratios` | `(1.0, 0.4)` | Dorsal top width and front-to-back length/flatness. |
-| `top_face_offset_ratio` | `0.0` | Lengthwise offset of the top face. |
-| `top_support_loop_ratios` | `(0.2, 0.5)` | Forward and rear placement of the top support loop. Larger values make the dorsal rounder. |
-| `chelicerae_height_ratio` | `0.35` | Height of the upper chelicerae line relative to the base. |
-| `lip_extrusion_ratio` | `(5.0, 1.0)` | Lengthwise and vertical lip extrusion. |
+| Parameter | Description |
+| --- | --- |
+| `Middle Section Size & Offset` | Thickness and outward curve of the middle of the fangs. |
+| `End Section Size & Offset` | Tip sharpness and how far down the fangs reach. |
+| `End Section Rotation` | Inward and downward angle of the fangs. |
 
 ### Abdomen
 
-| Parameter | Default | Description |
-| --- | ---: | --- |
-| `size_ratios` | `(1.2, 1.0, 1.2)` | Abdomen width, height, and length relative to the prosoma. |
-| `width_hold_ratios` | `(0.1, 0.6)` | Start and end of the constant-width region along the abdomen. |
-| `end_size_ratio` | `0.2` | Terminal abdomen width and height relative to its maximum size. This represents the spinnet. |
+| Parameter | Description |
+| --- | --- |
+| `Width / Height / Length` | Width, height, and length of the rear body. |
+| `Constant Width Range` | How far the rear body stays wide before tapering. |
 
-### Pedicel
+### Legs
 
-| Parameter | Default | Description |
-| --- | ---: | --- |
-| `pedicel_opening_ratios` | `(0.5, 0.5)` | Controls the side/upper opening proportion and the lower opening position of the pedicel. |
+| Parameter | Description |
+| --- | --- |
+| `Coxa Length` | How far the legs extend before the first joint. |
+| `Segment Lengths` | Length of each leg segment. |
+| `Other Leg Lengths & Widths` | Length and width of the middle and back legs relative to the front legs. |
+| `Segment Profiles` | Thickness profile along each leg segment. |
+| `Joint Limits` | Bending limits for each joint. |
+| `Rest Flex Ratios` | How bent the legs are in their rest pose. |
 
-### Chelicerae
+### Pedipalps (Front Feelers)
 
-| Parameter | Default | Description |
-| --- | ---: | --- |
-| `end_section_ratio` | `(0.25, 0.25)` | End-section width and height relative to the start section. |
-| `end_section_offset` | `(0.2, 3.15, 1.25)` | End-section offset in local width, height, and length directions. |
-| `end_section_rotation` | `(-90.0, 0.0)` | End-section rotation in the two local rotation directions. |
-| `middle_section_ratio` | `(1.0, 1.2)` | Middle-section width and height relative to the start section. |
-| `middle_section_offset` | `(0.1, 2.25)` | Middle-section offset in the local width and length directions. |
-| `middle_section_height_ratio` | `0.4` | Middle-section height between the start and end sections. |
+| Parameter | Description |
+| --- | --- |
+| `Coxa & Segment Lengths` | Length of the front feelers. |
+| `Endite Length & Surface Size` | Size of the mouth plates beside the fangs. |
+| `Rest Flex Ratios` | How curled the front feelers are in their rest pose. |
 
-### Legs: basic and main legs
-
-| Parameter | Default | Description |
-| --- | ---: | --- |
-| `coxa_length_ratio` | `1.2` | Front coxa length relative to the front socket width. |
-| `segment_length_ratios` | `(0.33, 1.5, 0.9, 1.2, 1, 0.7)` | Length of each post-coxa front-leg segment relative to front coxa length. |
-| `min_flex_angles` | `(180, 200, 30, 95, 150, 170)` | Minimum flex angle for each post-coxa segment joint. |
-| `max_flex_angles` | `(180, 270, 160, 190, 178, 190)` | Maximum flex angle for each post-coxa segment joint. |
-| `min_yaw_angles` | `(0, 0, 0, 0, 0, 0)` | Minimum yaw angle for each post-coxa segment joint. |
-| `max_yaw_angles` | `(25, 0, 0, 0, 0, 20)` | Maximum yaw angle for each post-coxa segment joint. |
-| `rest_flex_ratios` | `(0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 0.5)` | Rest flex interpolation ratio between min and max flex angles for each joint (0=min, 1=max). |
-| `leg_width_ratios` | `(0.8, 0.7, 0.8)` | Coxa-width scale for legs 2–4 relative to the front coxa. |
-| `leg_length_ratios` | `(0.88, 0.9, 1.1)` | Coxa-length scale for legs 2–4 relative to the front coxa. |
-| `*_sections` | MultiParm Vector3 | Cross-sections `(length_ratio, width_ratio, height_ratio)` for each segment under the "Segments" folder. |
-
-### Pedipalp
-
-| Parameter | Default | Description |
-| --- | ---: | --- |
-| `coxa_length` | `0.8` | Pedipalp coxa length relative to the front-leg coxa length. |
-| `segment_length_ratios` | `(0.17, 0.8, 0.4, 0.45, 0.4)` | Length of each post-coxa pedipalp segment relative to pedipalp coxa length. |
-| `endite_length_ratio` | `0.95` | Endite extension from its membrane attachment toward the coxa. |
-
+> Fine-tuning details, like seam widths, junction tolerances, and internal clearance angles, are left off this list. Explore the full parameter set, including the **Advanced** controls, directly on `/obj/spider` in `test/test.hip`.
 
 ## Acknowledgements
 
