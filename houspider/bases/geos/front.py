@@ -2,7 +2,7 @@ import math
 
 from hou import SopNode, Vector3
 
-from houspider.houkit_candidate import project_point_on_edge
+from houkit.geomath import project_point_on_edge
 from houspider.bases.attributes import baseend
 from houspider.bases.attributes import basesternum, basemaxilla, Region
 from houspider.helper import points_by_id, add_id_point, fill_face_with_region, points_from_geo, positions_from_geo

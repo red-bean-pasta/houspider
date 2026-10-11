@@ -9,7 +9,7 @@ from houkit.topology import outset, split_point
 
 from houspider.bases.attributes import ID, Region, basesternum, basesternummiddle
 from houspider.helper import get_control_parms, points_from_geo, prims_by_attr
-from houspider.houkit_candidate import reflect_point_across_edge
+from houkit.geomath import reflect_point_across_edge
 from houspider.sternums import attributes as sternum_attributes
 
 

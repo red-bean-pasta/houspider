@@ -4,7 +4,8 @@ from hou import SopNode, Geometry, Vector3, Prim, Point
 from houkit.topologies.basic import offset_point
 from houkit.topologies.face_offseter import outset
 
-from houspider.houkit_candidate import points_list_by_attrib, direction_and_distance
+from houkit.attributer import points_list_by_attrib
+from houkit.geomath import direction_and_distance
 
 from houspider.helper import get_control_parms, set_point_id, points_from_geo
 from houspider.bases.attributes import (
